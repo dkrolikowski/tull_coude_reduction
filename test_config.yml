@@ -1,3 +1,35 @@
+
 paths:
-	working_dir: "/Users/krolikowski/coude_data/20230814/"
-	code_dir: "/Users/krolikowski/codes/tull_coude_reduction/"
+  working_dir: "/Users/krolikowski/coude_data/20230814/"
+  code_dir: "/Users/krolikowski/codes/tull_coude_reduction/"
+  header_manifest_file_name: 'header_info.csv' # Name for the header info file
+
+calibration:
+  do_step: True
+  bias_bpm_percentile: 99.9 # Percentile to mark above as a bad pixel
+  flat_field_bpm_limit: 1.0e-4 # Flat field value to mark below as a bad pixel
+
+  cosmic_sub: True # Create object spectral cube with cosmic ray subtraction
+  cosmic_sub_n_iter: 2 # Set the number of iterations for the cosmic subtraction
+
+trace:
+  do_step: True
+  percentile_cut_for_trace: 60.0 # Flux percentile to cut at when making final trace using object spectra (85 is default)
+
+extraction:
+  do_step: True
+  science_extract_type: 'full' # or 'arc'
+  interpolate_order_block: 'no_interp' # old, test, or no_interp
+
+wavesol:
+  do_step: True
+  initial_wave_cal: 'prelim_wsol_new.pkl' # Name for the preliminary wavelength solution (initial guess)
+  wave_cal_poly_order: 2 # Polynomial order for the wavelength solution -- I feel like it should be higher...
+
+analysis:
+  do_step: True
+  continuum_fit: True # Continuum fit the object spectra
+
+
+#         self.verbose    = True    # Basically just have as much printing of what's going on to the terminal
+#         self.DarkCurVal = 0.0    # Value of the dark current
