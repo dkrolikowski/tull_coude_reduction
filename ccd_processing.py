@@ -147,3 +147,31 @@ def make_bad_pixel_mask( super_bias, flat_field, bias_bpm_percentile, flat_field
     
     return bad_pixel_mask
 
+##### Wrapper for building all calibration files
+
+def build_calibrations( header_df, bias_frame_indices, flat_frame_indices, config ):
+    """
+    
+
+    Parameters
+    ----------
+    header_df : TYPE
+        DESCRIPTION.
+    bias_frame_indices : TYPE
+        DESCRIPTION.
+    flat_frame_indices : TYPE
+        DESCRIPTION.
+    config : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    super_bias : TYPE
+        DESCRIPTION.
+    flat_field : TYPE
+        DESCRIPTION.
+    bad_pixel_mask : TYPE
+        DESCRIPTION.
+
+    """
+    return super_bias, flat_field, bad_pixel_mask
