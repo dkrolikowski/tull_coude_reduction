@@ -94,16 +94,16 @@ def build_flat_field( flat_file_names, read_noise, super_bias ):
         flat_cube.append( flat_image )
     
     # Get the flat field -- median combine the flat field images and subtract the super bias
-    flat_field_flux  = np.nanmedian( flat_cube, axis = 0 )
-    flat_field_flux -= super_bias['bias flux'].data
+    flat_field_median = np.nanmedian( flat_cube, axis = 0 )
+    flat_field_flux   = flat_field_median - super_bias['bias flux'].data
     
     # Get the flat field errors (flat field, read noise, and super bias)
-    flat_field_error = np.sqrt( flat_field_flux + read_noise ** 2.0 + super_bias['bias error'].data ** 2.0 )
+    flat_field_error = np.sqrt( flat_field_median + read_noise ** 2.0 + super_bias['bias error'].data ** 2.0 )
     
     ### Output
     
     # Put the flat field flux and error into ImageHDU objects, with minor math to make the flat field scale between 0 and 1
-    flat_field_flux_hdu  = fits.ImageHDU( ( flat_field_flux - np.nanmin( flat_field_flux ) ) / np.nanmax( flat_field_flux ), name = 'flat flux' )
+    flat_field_flux_hdu  = fits.ImageHDU( ( flat_field_flux - np.nanmin( flat_field_flux ) ) / np.nanmax( flat_field_flux - np.nanmin( flat_field_flux ) ), name = 'flat flux' )
     flat_field_error_hdu = fits.ImageHDU( flat_field_error / np.nanmax( flat_field_flux - np.nanmin( flat_field_flux ) ), name = 'flat error' )
     
     # Put into an HDUList
