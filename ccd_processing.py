@@ -285,8 +285,3 @@ def build_calibrations( header_df, bias_frame_indices, flat_frame_indices, confi
         
     return super_bias, flat_field, bad_pixel_mask
 
-
-
-
-
-
