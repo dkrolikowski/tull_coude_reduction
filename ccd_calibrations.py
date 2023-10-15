@@ -157,8 +157,8 @@ def make_bad_pixel_mask( super_bias, flat_field, bias_bpm_percentile, flat_field
     # FITS HDU
     bad_pixel_mask_hdu = fits.PrimaryHDU( bad_pixel_mask )
     
-    bad_pixel_mask_hdu[0].header['history'] = 'Bias above {:.2f}'.format( bias_percentile_cut_value )
-    bad_pixel_mask_hdu[0].header['history'] = 'Flat field below {:.5f}'.format( flat_field_bpm_limit )
+    bad_pixel_mask_hdu.header['history'] = 'Bias above {:.2f}'.format( bias_percentile_cut_value )
+    bad_pixel_mask_hdu.header['history'] = 'Flat field below {:.5f}'.format( flat_field_bpm_limit )
     
     return bad_pixel_mask_hdu
 
@@ -251,19 +251,19 @@ def build_calibrations( header_df, bias_frame_indices, flat_frame_indices, confi
         # First the super bias
         print( 'Reading bias files and creating super bias' )
         
-        super_bias = build_super_bias( header_df['file_names'].values[bias_frame_indices], ( header_df['rdn'] / header_df['gain'] ).values[bias_frame_indices] )
+        super_bias = build_super_bias( header_df['file_name'].values[bias_frame_indices], ( header_df['read_noise'] / header_df['gain'] ).values[bias_frame_indices][0] )
         super_bias.writeto( path.join( config['paths']['working_dir'], 'reduction', 'cals', 'super_bias.fits' ), overwrite = True, checksum = True )
         
         # Next the flat field
         print( 'Reading flat files and creating flat field' )
         
-        flat_field = build_flat_field( header_df['file_names'].values[flat_frame_indices], ( header_df['rdn'] / header_df['gain'] ).values[flat_frame_indices], super_bias )
+        flat_field = build_flat_field( header_df['file_name'].values[flat_frame_indices], ( header_df['read_noise'] / header_df['gain'] ).values[flat_frame_indices][0], super_bias )
         flat_field.writeto( path.join( config['paths']['working_dir'], 'reduction', 'cals', 'flat_field.fits' ), overwrite = True, checksum = True )
         
         # Last the bad pixel mask
         print( 'Building the bad pixel mask from the super bias and flat field' )
         
-        bad_pixel_mask = make_bad_pixel_mask( super_bias, flat_field, config.bias_bpm_percentile, config.flat_field_bpm_limit )
+        bad_pixel_mask = make_bad_pixel_mask( super_bias, flat_field, config['calibrations']['bias_bpm_percentile'], config['calibrations']['flat_field_bpm_limit'] )
         bad_pixel_mask.writeto( path.join( config['paths']['working_dir'], 'reduction', 'cals', 'bad_pixel_mask.fits' ), overwrite = True, checksum = True )
         
         ### Make quick check plots for the calibration files!
