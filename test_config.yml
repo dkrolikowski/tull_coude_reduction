@@ -1,16 +1,18 @@
 
 paths:
   working_dir: "/Users/krolikowski/coude_data/20230814/"
+  reduction_dir: "reduction/"
   code_dir: "/Users/krolikowski/codes/tull_coude_reduction/"
   header_manifest_file_name: 'header_info.csv' # Name for the header info file
 
 calibrations:
-  do_step: True
+  do_step: False
   bias_bpm_percentile: 99.9 # Percentile for the bias to mark above as a bad pixel
   flat_field_bpm_limit: 1.0e-4 # Flat field value to mark below as a bad pixel
 
 image_process:
   do_step: True
+  min_thar_exp_time: 30
   cosmic_sub: True # Create object spectral cube with cosmic ray subtraction
   cosmic_sub_n_iter: 2 # Set the number of iterations for the cosmic subtraction
 
