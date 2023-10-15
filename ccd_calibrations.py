@@ -1,5 +1,6 @@
-""" Library of functions for the CCD processing steps to reduce data from the Tull coude spectrograph
-Last updated: DMK, 9/24/2023
+""" Library of functions to build the CCD calibration files for image processing to reduce data from the Tull coude spectrograph
+Created: DMK, 9/24/2023
+Last updated: DMK, 10/14/2023
 """
 
 ##### Imports
@@ -13,7 +14,7 @@ from os import path
 ##### Functions
 
 def build_super_bias( bias_file_names, read_noise ):
-    """ Function to read in the bias images and combine them into a super bias to apply to other frames
+    """ Function to read in the bias images and median combine them into a super bias to apply to other frames
     
     Parameters
     ----------
@@ -21,7 +22,7 @@ def build_super_bias( bias_file_names, read_noise ):
         List of file names (type str) for the raw bias frames
         
     read_noise : float
-        The read noise (in X units)
+        The read noise (in ADU, converted from the header value which is given in electrons)
 
     Returns
     -------
@@ -62,7 +63,7 @@ def build_super_bias( bias_file_names, read_noise ):
     return super_bias
 
 def build_flat_field( flat_file_names, read_noise, super_bias ):
-    """ Function to read in flat field images and combine them into the flat field for image processing
+    """ Function to read in flat field images and median combine them into the flat field for image processing
 
     Parameters
     ----------
@@ -70,7 +71,7 @@ def build_flat_field( flat_file_names, read_noise, super_bias ):
         List of file names (type str) for the raw flat field frames
         
     read_noise : float
-        The read noise (in X units)
+        The read noise (in ADU, converted from the header value which is given in electrons)
         
     super_bias : HDUList
         Multi-extension FITS ImageHDU list with the median combined super bias and associated error created with build_super_bias.
@@ -118,26 +119,26 @@ def build_flat_field( flat_file_names, read_noise, super_bias ):
     return flat_field
 
 def make_bad_pixel_mask( super_bias, flat_field, bias_bpm_percentile, flat_field_bpm_limit ):
-    """
+    """ Function to create a bad pixel mask using the super bias and flat field.
 
     Parameters
     ----------
-    super_bias : TYPE
-        DESCRIPTION.
+    super_bias : HDUList
+        Multi-extension FITS ImageHDU list with the median combined super bias and associated error created with build_super_bias.
         
-    flat_field : TYPE
-        DESCRIPTION.
+    flat_field : HDUList
+        Multi-extension FITS ImageHDU list with the median combined flat field and associated error created with build_flat_field.
         
-    bias_bpm_percentile : TYPE
-        DESCRIPTION.
+    bias_bpm_percentile : float
+        The percentile above which super bias counts are marked as bad pixels (hot pixels). This is defined in the config file.
 
-    flat_field_bpm_limit : TYPE
-        DESCRIPTION.
+    flat_field_bpm_limit : float
+        The flat field value below which a pixel is marked as bad. This is defined in the config file.
 
     Returns
     -------
-    bad_pixel_mask : TYPE
-        DESCRIPTION.
+    bad_pixel_mask : FITSHDU
+        The bad pixel mask created using the super bias and flat field. Bad pixels are valued 0, good pixels are valued 1.
 
     """
     
@@ -162,19 +163,21 @@ def make_bad_pixel_mask( super_bias, flat_field, bias_bpm_percentile, flat_field
     return bad_pixel_mask_hdu
 
 def cal_image_2d_plot( image, figure_title, file_name, bpm = None ):
-    """
-    
+    """ Function to make a 2D image plot of an input 2D data array. Generalized to plot any input image.
 
     Parameters
     ----------
-    image : TYPE
-        DESCRIPTION.
-    title : TYPE
-        DESCRIPTION.
-    file_name : TYPE
-        DESCRIPTION.
-    bpm : TYPE, optional
-        DESCRIPTION. The default is None.
+    image : array
+        The 2D array to show.
+        
+    title : str
+        The title of the plot (here to mark what type of image is plotted).
+        
+    file_name : str
+        The file name to save the plot to.
+        
+    bpm : array, optional
+        The 2D array defining the bad pixel mask. This can be input and overplotted the input data image. The default is None.
 
     Returns
     -------
@@ -208,32 +211,35 @@ def cal_image_2d_plot( image, figure_title, file_name, bpm = None ):
         
     return None
 
-
 ##### Wrapper for building all calibration files
 
 def build_calibrations( header_df, bias_frame_indices, flat_frame_indices, config ):
-    """
-    
+    """ Main function to build all of the CCD calibrations, using the above functions for the individual calibrations.
 
     Parameters
     ----------
-    header_df : TYPE
-        DESCRIPTION.
-    bias_frame_indices : TYPE
-        DESCRIPTION.
-    flat_frame_indices : TYPE
-        DESCRIPTION.
-    config : TYPE
-        DESCRIPTION.
+    header_df : pandas DataFrame
+        The compiled information from the file headers.
+        
+    bias_frame_indices : list
+        List of indices of the bias frames for the header dataframe.
+        
+    flat_frame_indices : list
+        List of indices of the flat frames for the header dataframe.
+        
+    config : dict
+        The overall config file defined using YAML with all parameters for running the reduction and analysis pipeline.
 
     Returns
     -------
-    super_bias : TYPE
-        DESCRIPTION.
-    flat_field : TYPE
-        DESCRIPTION.
-    bad_pixel_mask : TYPE
-        DESCRIPTION.
+    super_bias : HDUList
+        Multi-extension FITS ImageHDU list with the median combined super bias and associated error created with build_super_bias.
+        
+    flat_field : HDUList
+        Multi-extension FITS ImageHDU list with the median combined flat field and associated error created with build_flat_field.
+        
+    bad_pixel_mask : FITSHDU
+        The bad pixel mask created with make_bad_pixel_mask using the super bias and flat field.
 
     """
     

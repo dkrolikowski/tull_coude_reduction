@@ -6,7 +6,7 @@ paths:
 
 calibration:
   do_step: True
-  bias_bpm_percentile: 99.9 # Percentile to mark above as a bad pixel
+  bias_bpm_percentile: 99.9 # Percentile for the bias to mark above as a bad pixel
   flat_field_bpm_limit: 1.0e-4 # Flat field value to mark below as a bad pixel
 
   cosmic_sub: True # Create object spectral cube with cosmic ray subtraction
