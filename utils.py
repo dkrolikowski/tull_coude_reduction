@@ -25,7 +25,8 @@ def make_header_manifest( header_manifest_file_name ):
 
     Returns
     -------
-    None.
+    header_df : pandas DataFrame
+        The data frame with the header information being written to a CSV file.
 
     """
     
@@ -87,5 +88,5 @@ def make_header_manifest( header_manifest_file_name ):
     # Write the header "manifest" out to a csv!
     header_df.to_csv( header_manifest_file_name, index = False )
     
-    return None
+    return header_df
 
