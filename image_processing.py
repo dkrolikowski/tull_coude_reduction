@@ -17,7 +17,6 @@ import pdb
 
 ##### Functions
 
-
 ##### Main wrapper function
 
 def build_images( file_indices, super_bias, flat_field, bad_pixel_mask, header_df, config ):
@@ -51,7 +50,7 @@ def build_images( file_indices, super_bias, flat_field, bad_pixel_mask, header_d
         frame_errors = np.sqrt( frame_errors ** 2.0 + super_bias['bias error'].data ** 2.0 + ( frame_values * flat_field['flat error'].data ) ** 2.0 ) / flat_field['flat flux'].data
         
         # Bad pixel mask
-        bpm = np.where( bad_pixel_mask[0].data == 0 )
+        bpm = np.where( bad_pixel_mask.data == 0 )
         
         # Set places where there is a bad pixel to the median of the frame flux, but with an extremely low S/N -- why not just nans?
         placeholder_bad_value = np.nanmedian( frame_values )
