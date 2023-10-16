@@ -9,6 +9,7 @@ Last updated by DMK on 10/14/2023
 import numpy as np
 
 from astropy.io import fits
+from astroscrappy import detect_cosmics
 from datetime import datetime
 
 import os
@@ -28,16 +29,18 @@ def build_images( file_indices, super_bias, flat_field, bad_pixel_mask, header_d
         
         input_file = fits.open( file_name )
         
-        # The read noise
-        read_noise = header_df['read_noise'].values[i_file] / header_df['gain'].values[i_file]
-        
+        # Assign the frame values, that can then be reassigned if cosmic subtraction is performed
+        frame_values = input_file[0].data
+                
         # Perform cosmic subtraction if flag is turned on in the config, and also only for object frames (not ThAr!)
         if config['image_process']['cosmic_subtract'] and input_file[0].header['imagetyp'] == 'object':
-            x = 1
-            # Command to do the cosmic subtraction
+                        
+            cosmics_mask, frame_values = detect_cosmics( input_file[0].data, sigclip = 5.0, sigfrac = 0.3, objlim = 5.0, niter = config['image_process']['cosmic_subtract_niter'], sepmed = True, satlevel = np.inf, 
+                                                        cleantype = 'medmask', gain = header_df['gain'].values[i_file], readnoise = header_df['read_noise'].values[i_file] )
             
-        frame_values = input_file[0].data
-        frame_errors = np.sqrt( frame_values + read_noise ** 2.0 )
+
+        # Calculate flux errors (in ADU)
+        frame_errors = np.sqrt( frame_values + ( header_df['read_noise'].values[i_file] / header_df['gain'].values[i_file] ) ** 2.0 )
         
         # Now do basic image processing -- bias subtraction and flat fielding
         
@@ -76,6 +79,9 @@ def build_images( file_indices, super_bias, flat_field, bad_pixel_mask, header_d
         
         output_file[0].header['HISTORY'] = 'Image processed on {}'.format( datetime.strftime( datetime.now(), '%Y/%m/%d' ) )
         output_file[0].header['HISTORY'] = 'Bias subtracted and flat fielded'
+        
+        if config['image_process']['cosmic_subtract'] and input_file[0].header['imagetyp'] == 'object':
+            output_file[0].header['HISTORY'] = 'Cosmic ray subtracted'
         
         output_file.writeto( os.path.join( config['paths']['reduction_dir'], 'object_files', 'tullcoude_{}.fits'.format( header_df['file_token'].values[i_file] ) ), overwrite = True )
         
