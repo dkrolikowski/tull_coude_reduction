@@ -244,50 +244,39 @@ def build_calibrations( header_df, bias_frame_indices, flat_frame_indices, confi
 
     """
     
-    ### If config flag for generating the calibration files is set to True -- build the files!
-    if config['calibrations']['do_step']:
+    ### Build the files
     
-        ### Build the files
-        
-        # First the super bias
-        print( 'Reading bias files and creating super bias' )
-        
-        super_bias = build_super_bias( header_df['file_name'].values[bias_frame_indices], ( header_df['read_noise'] / header_df['gain'] ).values[bias_frame_indices][0] )
-        super_bias.writeto( path.join( config['paths']['reduction_dir'], 'cals', 'super_bias.fits' ), overwrite = True, checksum = True )
-        
-        # Next the flat field
-        print( 'Reading flat files and creating flat field' )
-        
-        flat_field = build_flat_field( header_df['file_name'].values[flat_frame_indices], ( header_df['read_noise'] / header_df['gain'] ).values[flat_frame_indices][0], super_bias )
-        flat_field.writeto( path.join( config['paths']['reduction_dir'], 'cals', 'flat_field.fits' ), overwrite = True, checksum = True )
-        
-        # Last the bad pixel mask
-        print( 'Building the bad pixel mask from the super bias and flat field' )
-        
-        bad_pixel_mask = make_bad_pixel_mask( super_bias, flat_field, config['calibrations']['bias_bpm_percentile'], config['calibrations']['flat_field_bpm_limit'] )
-        bad_pixel_mask.writeto( path.join( config['paths']['reduction_dir'], 'cals', 'bad_pixel_mask.fits' ), overwrite = True, checksum = True )
-        
-        ### Make quick check plots for the calibration files!
-        
-        # First for the super bias
-        super_bias_title = 'Super Bias, Median Value = {0:.2f}'.format( np.nanmedian( super_bias['bias flux'].data ) )
-        cal_image_2d_plot( super_bias['bias flux'].data, super_bias_title, path.join( config['paths']['reduction_dir'], 'cals', 'super_bias.pdf' ) )
-        
-        # Next for the flat fiel
-        flat_field_title = 'Flat Field'
-        cal_image_2d_plot( flat_field['flat flux'].data, flat_field_title, path.join( config['paths']['reduction_dir'], 'cals', 'flat_field.pdf' ) )
-        
-        # Last for the bad pixel mask
-        bpm_title = 'Bad Pixel Mask, plotted on Super Bias'
-        cal_image_2d_plot( super_bias['bias flux'].data, bpm_title, path.join( config['paths']['reduction_dir'], 'cals', 'bad_pixel_mask.pdf' ), bpm = bad_pixel_mask.data )
-        
-    else:
-        print( 'Reading in already built super bias, flat field, and bad pixel mask files' )
-        
-        # Read in each of the files!
-        super_bias     = fits.open( path.join( config['paths']['reduction_dir'], 'cals', 'super_bias.fits' ) )
-        flat_field     = fits.open( path.join( config['paths']['reduction_dir'], 'cals', 'flat_field.fits' ) )
-        bad_pixel_mask = fits.open( path.join( config['paths']['reduction_dir'], 'cals', 'bad_pixel_mask.fits' ) )
-        
-    return super_bias, flat_field, bad_pixel_mask
+    # First the super bias
+    print( 'Reading bias files and creating super bias' )
+    
+    super_bias = build_super_bias( header_df['file_name'].values[bias_frame_indices], ( header_df['read_noise'] / header_df['gain'] ).values[bias_frame_indices][0] )
+    super_bias.writeto( path.join( config['paths']['reduction_dir'], 'cals', 'super_bias.fits' ), overwrite = True, checksum = True )
+    
+    # Next the flat field
+    print( 'Reading flat files and creating flat field' )
+    
+    flat_field = build_flat_field( header_df['file_name'].values[flat_frame_indices], ( header_df['read_noise'] / header_df['gain'] ).values[flat_frame_indices][0], super_bias )
+    flat_field.writeto( path.join( config['paths']['reduction_dir'], 'cals', 'flat_field.fits' ), overwrite = True, checksum = True )
+    
+    # Last the bad pixel mask
+    print( 'Building the bad pixel mask from the super bias and flat field' )
+    
+    bad_pixel_mask = make_bad_pixel_mask( super_bias, flat_field, config['calibrations']['bias_bpm_percentile'], config['calibrations']['flat_field_bpm_limit'] )
+    bad_pixel_mask.writeto( path.join( config['paths']['reduction_dir'], 'cals', 'bad_pixel_mask.fits' ), overwrite = True, checksum = True )
+    
+    ### Make quick check plots for the calibration files!
+    
+    # First for the super bias
+    super_bias_title = 'Super Bias, Median Value = {0:.2f}'.format( np.nanmedian( super_bias['bias flux'].data ) )
+    cal_image_2d_plot( super_bias['bias flux'].data, super_bias_title, path.join( config['paths']['reduction_dir'], 'cals', 'super_bias.pdf' ) )
+    
+    # Next for the flat fiel
+    flat_field_title = 'Flat Field'
+    cal_image_2d_plot( flat_field['flat flux'].data, flat_field_title, path.join( config['paths']['reduction_dir'], 'cals', 'flat_field.pdf' ) )
+    
+    # Last for the bad pixel mask
+    bpm_title = 'Bad Pixel Mask, plotted on Super Bias'
+    cal_image_2d_plot( super_bias['bias flux'].data, bpm_title, path.join( config['paths']['reduction_dir'], 'cals', 'bad_pixel_mask.pdf' ), bpm = bad_pixel_mask.data )
+    
+    return None
 
