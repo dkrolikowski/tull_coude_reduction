@@ -154,163 +154,269 @@ def find_order_centers_along_slice( flat_slice, method, order_width_xdisp, confi
     return order_trace_centers
 
 def find_full_trace( flat_field_flux, order_centers, order_start_index, order_width_xdisp, config ):
+    """ Function to find the full trace from starting locations found at the edge of the echellogram.
+    The orders are traced along the flat field, defined with roughly estimating the center of the flat field order 2D spectrum.
 
-    # Empty array to hold the full trace
+    Parameters
+    ----------
+    flat_field_flux : array
+        The full 2D flat field flux array.
+    order_centers : array
+        Array with the cross disperion pixel location of the order centers from find_order_centers_along_slice (shape: number of orders found).
+    order_start_index : int
+        The index at which the starting order centers was found (typically to avoid the overscan region).
+    order_width_xdisp : int
+        A rough estimate of the cross dispersion width of an order in the flat field, defined in the config file.
+    config : dict
+        The overall config file defined using YAML with all parameters for running the reduction and analysis pipeline.
+
+    Returns
+    -------
+    full_trace : array
+        The full trace found from the starting locations using the flat field (shape: number of orders found, number of pixels).
+    """
+    
+    ### Get the full trace along the flat field
+
+    # Empty array to hold the full trace -- shape: number of orders found to start, "y"-axis pixels (no overscan)
     full_trace = np.zeros( ( order_centers.size, flat_field_flux.shape[0] ), dtype = np.int )
     
-    for pixel in range( 1, flat_field_flux.shape[0] + 1 ):
+    # Set the previous trace location to be to order centers
+    prev_trace = order_centers
+    
+    # Loop through each pixel along the trace
+    for pixel in range( 1, full_trace.shape[1] + 1 ):
         
-        if pixel == 1:
-            prev_trace = order_centers
-        else:
-            prev_trace = full_trace[:,-pixel+1]
-            
+        # Pull out the cross-dispersion direction slice of the flat field at this pixel
         flat_slice = flat_field_flux[:,-pixel+order_start_index+1]
         
+        # Recenter the trace using the previous pixel's center as a starting point, based on the flat field flux slice at the current pixel
         full_trace[:,-pixel] = recenter_order_trace( prev_trace, flat_slice, order_width_xdisp // 2 + 5 )
         
-    plt.clf()
-    plt.figure( figsize = ( 8, 6 ) )
-    
-    # Plot the image
-    plt.imshow( np.log10( flat_field_flux ), cmap = 'gray', aspect = 'auto', interpolation = 'none' )
-    
-    for i_order in range( full_trace.shape[0] ):
-        plt.plot( full_trace[i_order], '.', c = '#bf3465', ms = 1 )
-    
-    # Save the figure
-    plt.savefig( os.path.join( config['paths']['reduction_dir'], 'plots', 'full_trace.pdf' ), bbox_inches = 'tight', pad_inches = 0.05 )
-    plt.clf()
+        # Set the previous trace location to be this pixel's trace
+        prev_trace = full_trace[:,-pixel]
         
+    ### Plot the full trace on top of the flat field image
+    
+    plot_trace_on_image( flat_field_flux, full_trace, [ ( 2048, 0 ), ( 2048, 1000 ), ( 1050, 0 ) ], os.path.join( config['paths']['reduction_dir'], 'plots', 'full_trace.pdf' ), title_str = 'Full Trace' )
+    
     return full_trace
 
-def fit_full_trace( trace, flat_field_flux, trace_poly_degree, trace_poly_fit_start_index, config ):
+def fit_full_trace( trace, trace_poly_degree, trace_poly_fit_start_index, flat_field_flux, config ):
+    """ Function to take the full trace from find_full_trace and fit each order with a polynomial.
+    Then, the polynomial coefficients are fit as a function of order, and these hyper-fits are chosen to find "bad orders" with poorly defined traces.
+    Bad orders have their trace polynomial fits replaced with coefficients from these coefficient hyper-fits.
     
-    fit_trace = np.zeros( trace.shape )
-    trace_poly_pars = np.zeros( ( trace.shape[0], trace_poly_degree + 1 ) )
+    Parameters
+    ----------
+    trace : array
+        The full trace found in find_full_trace.
+    trace_poly_degree : int
+        The polynomial degree to use for fitting each order's trace as defined in the config file.
+    trace_poly_fit_start_index : int
+        The starting pixel index for inclusion in fitting the trace as defined in the config file. This would not be 0 if the end of the trace is poorly defined from find_full_trace.
+    flat_field_flux : array
+        The full 2D flat field flux array.
+    config : dict
+        The overall config file defined using YAML with all parameters for running the reduction and analysis pipeline.
+
+    Returns
+    -------
+    fit_trace : array
+        The values of the trace resulting from the polynomial fits to each order's input full trace.
+    bad_orders : array
+        A list of orders with bad polynomial trace fits, which are replaced using hyper-fits to the polynomial coefficient of well-defined order traces.
+    """
     
+    ### Initial fit to the order traces
+    
+    # Set up empty arrays to hold the initial fit trace and the polynomial fit coefficients
+    initial_fit_trace = np.zeros( trace.shape )
+    trace_poly_pars   = np.zeros( ( trace.shape[0], trace_poly_degree + 1 ) )
+    
+    # Go through each of the found orders and fit with a polynomial!
     for i_order in range( trace.shape[0] ):
+        
+        # Only fit the pixels from the config-defined start index onwards (at the left end of the echellogram the fit can get funky for bad orders)
         trace_poly_pars[i_order] = np.polyfit( np.arange( trace_poly_fit_start_index, trace.shape[1] ), trace[i_order,trace_poly_fit_start_index:], trace_poly_degree )
 
-    # Plot the initial trace fitting
+        # Evaluate the fit
+        initial_fit_trace[i_order] = np.polyval( trace_poly_pars[i_order], np.arange( trace.shape[1] ) )
+        
+    # Plot the initial trace fit
+    plot_file_name = os.path.join( config['paths']['reduction_dir'], 'plots', 'initial_fit_trace.pdf' )
+    plot_trace_on_image( flat_field_flux, trace, [ ( 2048, 0 ), ( 2048, 1000 ), ( 1050, 0 ) ], plot_file_name, title_str = 'Initial Trace Fit, using Pixels {}:'.format( trace_poly_fit_start_index ), trace_fit = initial_fit_trace )
     
-    plt.clf()
-    with PdfPages( os.path.join( config['paths']['reduction_dir'], 'plots', 'initial_fit_full_trace.pdf' ) ) as pdf:
-        for y_range in [ ( 2048, 0 ), ( 2048, 1000 ), ( 950, 0 ) ]:
-            plt.figure( figsize = ( 8, 6 ) )
-            
-            plt.imshow( np.log10( flat_field_flux ), aspect = 'auto', cmap = 'gray' )
-            
-            for i_order in range( trace.shape[0] ):
-                plt.plot( trace[i_order], '.', c = '#dfa5e5', ms = 2 )
-                
-                plt.plot( np.arange( trace_poly_fit_start_index, trace[i_order].size ), trace[i_order,trace_poly_fit_start_index:], '.', c = '#50b29e', ms = 2 )
-                
-                plt.plot( np.polyval( trace_poly_pars[i_order], np.arange( trace.shape[1] ) ), '#bf3465', lw = 1 )
-                
-            plt.xlim( 0, 2048 )
-            plt.ylim( y_range )
-            
-            pdf.savefig()
-            plt.close()
-            
-    # Do a round of sigma clipping while hyper fitting the trace polynomial parameters!
+    ### Fit the polynomial coefficients as a function of order, and sigma clip to find "bad orders" with poorly fit/defined traces to replace
     
-    # hyper_poly_pars = np.zeros( ( 3, 4 ) )
-    
+    # Empty list to hold the bad orders
     bad_orders = []
             
-    # First go through the coefficients -- find orders that are "bad" across any of them
+    # Go through each of the polynomial coefficients and fit. Bad orders are those that are sigma clipped in ANY of the coefficients 
     for i_coeff in range( trace_poly_degree + 1 ):
         
-        
-        # Fit the trace polynomial coefficient across orders
-        hyper_fit = np.polyfit( np.arange( trace_poly_pars.shape[0] ), trace_poly_pars[:,i_coeff], 2 )
+        # Fit the trace polynomial coefficient across orders with a 2nd order polynomial (maybe make this a config defined variable at some point?)
+        hyper_fit      = np.polyfit( np.arange( trace_poly_pars.shape[0] ), trace_poly_pars[:,i_coeff], 2 )
         hyper_fit_vals = np.polyval( hyper_fit, np.arange( trace_poly_pars.shape[0] ) )
         
-        # Sigma clip based on the absolute median deviation
-        mad = np.nanmedian( np.abs( trace_poly_pars[:,i_coeff] - hyper_fit_vals ) )
+        ## Sigma clip based on the absolute median deviation
+        mad  = np.nanmedian( np.abs( trace_poly_pars[:,i_coeff] - hyper_fit_vals ) )
         
+        # Orders with residuals greater than 10x the MAD are considered bad
         mask = ( np.abs( trace_poly_pars[:,i_coeff] - hyper_fit_vals ) <= 10 * mad )
         
         bad_orders.extend( np.where( ~mask )[0] )
         
+    # Get the unique list of bad orders (some may be bad in more than one coefficient) and define the good orders as all others
     bad_orders  = np.unique( bad_orders )        
     good_orders = np.setdiff1d( np.arange( trace_poly_pars.shape[0] ), bad_orders )
-        
-    final_trace_poly_pars  = trace_poly_pars.copy()
-    final_trace_hyper_pars = [ ]
     
+    ### Now do a second round of polynomial coefficent fitting using only the good orders, to get hyper-fits that will be used to define the trace for the bad orders
+    
+    final_trace_poly_pars  = trace_poly_pars.copy()
+    final_trace_hyper_pars = np.zeros( ( trace_poly_degree + 1, 6 ) )
+    
+    # Wrap this in a multi-page plot with figures for each of the order trace polynomial coefficients and their hyper-fits
     with PdfPages( os.path.join( config['paths']['reduction_dir'], 'plots', 'fit_trace_hyper_poly.pdf' ) ) as pdf:
         
-        # Now fit only the "good" orders
+        # Go through each of the coefficients and fit, using only the good orders
         for i_coeff in range( trace_poly_degree + 1 ):
             
             fig, axs = plt.subplots( 2, 1, figsize = ( 10, 6 ), sharex = True, gridspec_kw = { 'height_ratios': [ 3, 1 ] } )
 
-            # Second fit
-            hyper_fit = np.polyfit( good_orders, trace_poly_pars[good_orders,i_coeff], 5 )
+            # Hyper fit on the good orders, using higher order polynomial than before (more accurate and now less prone to bad hyper-fit with the bad orders excluded)
+            hyper_fit      = np.polyfit( good_orders, trace_poly_pars[good_orders,i_coeff], 5 )
             hyper_fit_vals = np.polyval( hyper_fit, np.arange( trace_poly_pars.shape[0] ) )
             
-            final_trace_hyper_pars.append( hyper_fit )
             
-            axs[0].plot( np.arange( trace_poly_pars.shape[0] ), trace_poly_pars[:,i_coeff], 'o-' )
-            axs[0].plot( good_orders, trace_poly_pars[good_orders,i_coeff], '*-' )
+            # Plot the order trace polynomial coefficients, with the good orders highlight as stars
+            axs[0].plot( np.arange( trace_poly_pars.shape[0] ), trace_poly_pars[:,i_coeff], '.-', c = '#874310', ms = 7, lw = 0.85 )
+            axs[0].plot( good_orders, trace_poly_pars[good_orders,i_coeff], '*', c = '#dfa5e5', ms = 7, label = '"Good" Orders Included in Hyper Fit' )
 
-            axs[0].plot( np.arange( trace_poly_pars.shape[0] ), hyper_fit_vals, '-' )
+            # Plot the hyper-fit to the coefficients
+            axs[0].plot( np.arange( trace_poly_pars.shape[0] ), hyper_fit_vals, '-', c = '#bf3465', lw = 1.5 )
             
-            axs[1].plot( good_orders, np.polyval( hyper_fit, good_orders ) - trace_poly_pars[good_orders,i_coeff], 'o' )
+            axs[1].plot( good_orders, np.polyval( hyper_fit, good_orders ) - trace_poly_pars[good_orders,i_coeff], '.' )
+            
+            # Labels and legend
+            
+            axs[0].set_ylabel( 'Trace Polynomial Coefficient $c_{}$'.format( trace_poly_degree - i_coeff ) )
+            axs[0].legend( fontsize = 'small' )
+            
+            axs[1].set_xlabel( 'Echelle Order Index' )
+            axs[1].set_ylabel( 'Residuals' )
             
             pdf.savefig()
             plt.close()
-                       
-            final_trace_poly_pars[bad_orders,i_coeff] = np.polyval( hyper_fit, bad_orders )
             
-    plt.clf()
-    with PdfPages( os.path.join( config['paths']['reduction_dir'], 'plots', 'final_fit_full_trace.pdf' ) ) as pdf:
-        for y_range in [ ( 2048, 0 ), ( 2048, 1000 ), ( 950, 0 ) ]:
+            # Output the coefficient hyper-fit parameters
+            final_trace_hyper_pars[i_coeff] = hyper_fit
+            
+            # Change the order trace polynomial coefficients to those from the hyper-fit for any bad orders
+            if bad_orders.size > 0:
+                final_trace_poly_pars[bad_orders,i_coeff] = np.polyval( hyper_fit, bad_orders )
+            
+    ### Get the final fit order trace values to output
+    
+    # Empty array to hold the final fit trace
+    final_fit_trace = np.zeros( trace.shape )
+    
+    for i_order, fit_pars in enumerate( final_trace_poly_pars ):
+        final_fit_trace[i_order] = np.polyval( fit_pars, np.arange( trace.shape[1] ) )
+            
+    # Plot the final fit trace on the flat field
+    plot_file_name = os.path.join( config['paths']['reduction_dir'], 'plots', 'final_fit_trace.pdf' )
+    plot_trace_on_image( flat_field_flux, trace, [ ( 2048, 0 ), ( 2048, 1000 ), ( 1050, 0 ) ], plot_file_name, title_str = 'Final Trace Fit, using Pixels {}:'.format( trace_poly_fit_start_index ), trace_fit = final_fit_trace, orders_to_highlight = bad_orders )
+
+    # # If the config says to extend the trace to 58 orders (and less than that are found) extend the hyper fit
+    # if fit_trace.shape[0] < config['trace']['number_of_orders']:
+        
+    #     fit_trace = np.zeros( ( config['trace']['number_of_orders'], trace.shape[1] ) )
+        
+    #     for i_order in range( config['trace']['number_of_orders'] ):
+            
+    #         if i_order < config['trace']['number_of_orders']:
+    #             fit_trace[i_order] = np.polyval( final_trace_poly_pars[i_order], np.arange( trace.shape[1] ) )
+    #         else:
+    #             fit_pars = [ np.polyval( hyper_fit_pars, i_order ) for hyper_fit_pars in final_trace_hyper_pars ]
+    #             fit_trace[i_order] = np.polyval( fit_pars, np.arange( trace.shape[1] ) )
+        
+    return final_fit_trace, bad_orders
+
+def plot_trace_on_image( image, trace, y_ranges, file_name, title_str = '', trace_fit = None, orders_to_highlight = [] ):
+    """ Function to plot a trace on top of an image. It can plot plot multiple images in a single multi-page PDF with different y ranges for zooming in on different echellogram areas.
+    It can also take an array with the fit trace to overplot as a line for each order, and highlight certain orders (e.g. poorly fit orders) to be plotted as a different formatted line.
+
+    Parameters
+    ----------
+    image : array
+        The 2D image to plot in the background behind the trace.
+    trace : array
+        The order trace points to overplot (shape: number of orders, number of pixels).
+    y_ranges : list
+        A list of tuples with the y-ranges to plot as individual figures in the multi-page PDF. The motivation is to allow for zoomed-in looks at the trace.
+    file_name : str
+        The file name for the output figure.
+    title_str : str, optional
+        An additional string for the plot title to append to the title with information about the number of orders traced. The default is ''.
+    trace_fit : array, optional
+        An array of order trace fit values to overplot as a line for each order if provided. The default is None.
+    orders_to_highlight : list, optional
+        A list of orders to highlight in the fit trace (if provided) with dashed lines rather than solid lines. The default is [].
+
+    Returns
+    -------
+    None.
+    """
+    
+    # Set up the multi-page PDF (only will be multiple pages if the y_ranges list input has more than one entry).
+    with PdfPages( file_name ) as pdf:
+        
+        # Loop through each of the y ranges input to the figure -- allowing for different pages at different zoom-in levels
+        for y_range in y_ranges:
             plt.figure( figsize = ( 8, 6 ) )
             
-            plt.imshow( np.log10( flat_field_flux ), aspect = 'auto', cmap = 'gray' )
+            # Plot the background image, in log scale
+            plt.imshow( np.log10( image ), aspect = 'auto', cmap = 'gray' )
             
+            # Loop through each of the orders in the trace and over plot as points
             for i_order in range( trace.shape[0] ):
-                plt.plot( trace[i_order], '.', c = '#dfa5e5', ms = 2 )
+                plt.plot( trace[i_order], '.', c = '#dfa5e5', ms = 1 )
                 
-                plt.plot( np.arange( trace_poly_fit_start_index, trace[i_order].size ), trace[i_order,trace_poly_fit_start_index:], '.', c = '#874310', ms = 2 )
+                if trace_fit is not None:
+                    if i_order in orders_to_highlight:
+                        plt.plot( trace_fit[i_order], '--', c = '#50b29e', lw = 1.25, zorder = 12 )
+                    else:
+                        plt.plot( trace_fit[i_order], '-', c = '#bf3465', lw = 1, zorder = 12 )         
                 
-                plt.plot( np.polyval( trace_poly_pars[i_order], np.arange( trace.shape[1] ) ), '#bf3465', lw = 1 )
-                if i_order in bad_orders:
-                    plt.plot( np.polyval( final_trace_poly_pars[i_order], np.arange( trace.shape[1] ) ), '#50b29e', lw = 1, ls = '--' )
-
-            plt.xlim( 0, 2048 )
+            # Set the limits -- x limit is full image, y limit is input y range                
+            plt.xlim( 0, image.shape[0] )
             plt.ylim( y_range )
             
-            pdf.savefig()
+            plt.title( 'Number of orders traced: {}, {}'.format( trace.shape[0], title_str ) )
+            
+            pdf.savefig( bbox_inches = 'tight', pad_inches = 0.05 )
             plt.close()
-            
-    # Output the fit trace
-    for i_order, fit_pars in enumerate( final_trace_poly_pars ):
-        
-        fit_trace[i_order] = np.polyval( fit_pars, np.arange( trace.shape[1] ) )
-        
-    # If the config says to extend the trace to 58 orders (and less than that are found) extend the hyper fit
-    if fit_trace.shape[0] < config['trace']['number_of_orders']:
-        
-        fit_trace = np.zeros( ( config['trace']['number_of_orders'], trace.shape[1] ) )
-        
-        for i_order in range( config['trace']['number_of_orders'] ):
-            
-            if i_order < config['trace']['number_of_orders']:
-                fit_trace[i_order] = np.polyval( final_trace_poly_pars[i_order], np.arange( trace.shape[1] ) )
-            else:
-                fit_pars = [ np.polyval( hyper_fit_pars, i_order ) for hyper_fit_pars in final_trace_hyper_pars ]
-                fit_trace[i_order] = np.polyval( fit_pars, np.arange( trace.shape[1] ) )
-        
-    return fit_trace, bad_orders
+
+    return None
     
 ##### Main wrapper script to find and fit the trace
 
 def get_trace( flat_field, config ):
+    """ Main wrapper function to find and fit the full echellogram order traces, and output the fitted trace file for extracting spectra.
+    It does not return the trace location array, but writes it to a FITS file.
+
+    Parameters
+    ----------
+    flat_field : HDUList
+        The FITS file containing the flat field.
+    config : dict
+        The overall config file defined using YAML with all parameters for running the reduction and analysis pipeline.
+
+    Returns
+    -------
+    None.
+    """
             
     ### Find the starting location of the order traces
     
@@ -326,9 +432,9 @@ def get_trace( flat_field, config ):
     
     # Get the full trace and fit it with polynomials per order
     full_trace = find_full_trace( flat_field['flat flux'].data, order_start_centers, config['trace']['order_start_index'], config['instrument']['order_xdisp_width'], config )
-    
+        
     # Fit the trace
-    fit_trace, orders_poorly_fit = fit_full_trace( full_trace, flat_field['flat flux'].data, config['trace']['trace_poly_degree'], config['trace']['trace_poly_fit_start_index'], config )
+    fit_trace, orders_poorly_fit = fit_full_trace( full_trace, config['trace']['trace_poly_degree'], config['trace']['trace_poly_fit_start_index'], flat_field['flat flux'].data, config )
     
     # Only output up to the number of orders we want to extract
     fit_trace = fit_trace[:config['trace']['number_of_orders']]
@@ -352,7 +458,6 @@ def get_trace( flat_field, config ):
     
     
     trace_hdu.writeto( os.path.join( config['paths']['reduction_dir'], 'trace', 'trace.fits' ), overwrite = True )
-    
     
     return None
         
