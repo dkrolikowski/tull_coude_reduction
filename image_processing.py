@@ -36,8 +36,7 @@ def build_images( file_indices, super_bias, flat_field, bad_pixel_mask, header_d
                         
             cosmics_mask, frame_values = detect_cosmics( input_file[0].data, sigclip = 5.0, sigfrac = 0.3, objlim = 5.0, niter = config['image_process']['cosmic_subtract_niter'], sepmed = True, satlevel = np.inf, 
                                                         cleantype = 'medmask', gain = header_df['gain'].values[i_file], readnoise = header_df['read_noise'].values[i_file] )
-            
-
+        
         # Calculate flux errors (in ADU)
         frame_errors = np.sqrt( frame_values + ( header_df['read_noise'].values[i_file] / header_df['gain'].values[i_file] ) ** 2.0 )
         
@@ -50,7 +49,7 @@ def build_images( file_indices, super_bias, flat_field, bad_pixel_mask, header_d
         frame_errors = np.sqrt( frame_errors ** 2.0 + super_bias['bias error'].data ** 2.0 + ( frame_values * flat_field['flat error'].data ) ** 2.0 ) / flat_field['flat flux'].data
         
         # Bad pixel mask
-        bpm = np.where( bad_pixel_mask.data == 0 )
+        bpm = np.where( bad_pixel_mask[0].data == 0 )
         
         # Set places where there is a bad pixel to the median of the frame flux, but with an extremely low S/N -- why not just nans?
         placeholder_bad_value = np.nanmedian( frame_values )
