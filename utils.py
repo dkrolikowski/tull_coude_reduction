@@ -90,3 +90,31 @@ def make_header_manifest( header_manifest_file_name ):
     
     return header_df
 
+def gaussian_1d( x_values, amplitude, mean, sigma, background ):
+    """ Function to return 1D Gaussian.
+
+    Parameters
+    ----------
+    x_values : array
+        Array to evaluate the Gaussian at.
+    amplitude : float
+        Amplitude of the Gaussian (value at mean above the background).
+    mean : float
+        Mean of the Gaussian.
+    sigma : float
+        Standard deviation of the Gaussian.
+    background : float
+        Offset of the Gaussian.
+
+    Returns
+    -------
+    y_values : array
+        Array of Gaussian values at input x_values array.
+    """
+    
+    y_values = amplitude * np.exp( - ( x_values - mean ) ** 2.0 / ( 2.0 * sigma ** 2.0 ) ) + background
+    
+    return y_values
+
+
+
