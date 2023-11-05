@@ -9,6 +9,7 @@ import pandas as pd
 
 from astropy.io import fits
 from astropy.time import Time
+from scipy.stats import median_abs_deviation
 
 import glob
 import re
@@ -115,6 +116,84 @@ def gaussian_1d( x_values, amplitude, mean, sigma, background ):
     y_values = amplitude * np.exp( - ( x_values - mean ) ** 2.0 / ( 2.0 * sigma ** 2.0 ) ) + background
     
     return y_values
+
+def polynomial_fit_sigma_reject( x_data, y_data, polynomial_degree, num_sigma_cut, num_iterations, y_limits = None, return_data = False ):
+    """ Function to perform iterative polynomial fitting based on sigma rejection with the residuals
+    
+    Parameters
+    ----------
+    x_data : array
+        Array of x values to fit
+    y_data : array
+        Array of y values to fit
+    polynomial_degree : int
+        Degree of the polynomial to fit
+    num_sigma_cut : float
+        The number of sigma beyond which residuals are rejected
+    num_iterations : int
+        The number of iterations for fitting
+    y_limits : list, optional
+        A list with the lower and upper limits for y data to fit. Default is None.
+    return_data : bool, optional
+        Flag for whether or not to return the x and y data arrays that are included in the final fit. Default is False.
+    
+    Returns
+    -------
+    poly_fit : array
+        The best fit polynomial coefficients, the output of numpy polyfit
+    x_data_to_fit : array, optional
+        The x values included in the final fit that is output (after the iterative rejection). Returned if return_data is True.
+    y_data_to_fit : array, optional
+        The y values included in the final fit that is output (after the iterative rejection). Returned if return_data is True.
+    """
+    
+    ### First -- get data to use in the first place: no nans and within parameter limits if they are given
+    
+    # Not nans
+    not_nan = np.where( np.isfinite( y_data ) )[0]
+    
+    # Y data within limits if they are given!
+    if y_limits is not None:
+        within_limits = np.where( ( y_data > y_limits[0] ) & ( y_data < y_limits[1] ) )[0]
+        
+        # Intersect with the not nans to get data to use
+        to_fit = np.intersect1d( not_nan, within_limits )
+
+    # If no limits are given, only care about the not nans
+    else:
+        to_fit = not_nan
+                
+    x_data_to_fit = x_data[to_fit]
+    y_data_to_fit = y_data[to_fit]
+        
+    ### Now do a first round fit!
+
+    poly_fit = np.polyfit( x_data_to_fit, y_data_to_fit, polynomial_degree )
+    
+    ### Now loop through the number of iterations!
+    
+    for i_iter in range( num_iterations ):
+        
+        # Get the residuals
+        fit_residuals = y_data_to_fit - np.polyval( poly_fit, x_data_to_fit )
+        
+        # The standard deviation (scaled MAD) of the residuals
+        fit_residuals_stdev = median_abs_deviation( fit_residuals, nan_policy = 'omit', scale = 'normal' )
+                
+        ### Another fit, where residuals are within the provide number of sigma for cutting
+        
+        to_fit = np.where( np.abs( fit_residuals ) < num_sigma_cut * fit_residuals_stdev )[0]
+        
+        # Re-define the arrays to fit
+        x_data_to_fit = x_data_to_fit[to_fit]
+        y_data_to_fit = y_data_to_fit[to_fit]
+        
+        poly_fit = np.polyfit( x_data_to_fit, y_data_to_fit, polynomial_degree )
+    
+    if return_data:
+        return poly_fit, x_data_to_fit, y_data_to_fit
+    else:
+        return poly_fit
 
 
 
