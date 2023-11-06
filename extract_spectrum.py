@@ -49,13 +49,16 @@ def sum_extraction( flux_image, err_image, num_pixels, order_width, background_o
         # Fit a polynomial to the counts across the bottom of the order image. A 2nd order polynomial, iterating once for a 10 sigma rejection
         background_bottom_fit = tull_coude_utils.polynomial_fit_sigma_reject( np.arange( num_pixels ), np.mean( flux_image[:,-2:], axis = 1 ), 2, 10, 1 )
 
-
     ### Now loop through each of the dispersion pixels
     for pixel in range( num_pixels ):
 
         ### First pull out the order cross dispersion slice -- flux and error
         flux_slice = flux_image[pixel]
         err_slice  = err_image[pixel]
+        
+        # Mirror the optimal extraction -- if only 3 or fewer pixels are not nans, skip!
+        if np.isfinite( flux_slice ).sum() < 4:
+            continue
 
         ### Get the background -- if no subtraction is requested set it to 0
         if background_option == 'subtract':
@@ -237,7 +240,7 @@ def optimal_extraction( flux_image, err_image, num_pixels, order_width, backgrou
 
 ##### Main wrapper function
 
-def extract_spectrum( file_indices, trace, header_df, extraction_method, config ):
+def extract_spectrum( file_indices, trace, header_df, extraction_method, background_option, config ):
     
     # If flagged in the config, reverse the order trace array
     if config['extraction']['reverse_traced_orders']:
@@ -276,9 +279,9 @@ def extract_spectrum( file_indices, trace, header_df, extraction_method, config 
             err_order_image  = get_order_image_block( err_full_image, config['extraction']['order_xdisp_width_extract'], trace[order] )
             
             if extraction_method == 'optimal_extraction':
-                extracted_flux[order], extracted_err[order] = optimal_extraction( flux_order_image, err_order_image, num_pixels, config['extraction']['order_xdisp_width_extract'], config['extraction']['background_subtraction'] )
+                extracted_flux[order], extracted_err[order] = optimal_extraction( flux_order_image, err_order_image, num_pixels, config['extraction']['order_xdisp_width_extract'], background_option )
             elif extraction_method == 'sum_extraction':
-                extracted_flux[order], extracted_err[order] = sum_extraction()
+                extracted_flux[order], extracted_err[order] = sum_extraction( flux_order_image, err_order_image, num_pixels, config['extraction']['order_xdisp_width_extract'], background_option )
         
         ### Write out the file with the extracted spectrum!
         
@@ -294,7 +297,7 @@ def extract_spectrum( file_indices, trace, header_df, extraction_method, config 
         
         output_file[0].header['NORDERS']  = ( num_orders, 'Number of extracted orders' )
         output_file[0].header['EXTRACT']  = ( extraction_method, 'Extraction method used' )
-        output_file[0].header['BGSUB']    = ( config['extraction']['background_subtraction'], 'Background subtraction option used' )
+        output_file[0].header['BGSUB']    = ( background_option, 'Background subtraction option used' )
         output_file[0].header['ORDWIDTH'] = ( config['extraction']['order_xdisp_width_extract'], 'Cross dispersion order pixel width' )
         
         output_file[0].header['HISTORY'] = 'Spectrum extracted on {}'.format( datetime.strftime( datetime.now(), '%Y/%m/%d' ) )
