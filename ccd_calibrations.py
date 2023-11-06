@@ -21,15 +21,13 @@ def build_super_bias( bias_file_names, read_noise ):
     ----------
     bias_file_names : list
         List of file names (type str) for the raw bias frames
-        
     read_noise : float
         The read noise (in ADU, converted from the header value which is given in electrons)
-
+        
     Returns
     -------
     super_bias : HDUList
         Multi-extension FITS ImageHDU list with the median combined super bias and associated error
-
     """
     
     # Initialize an array to hold the bias images
@@ -70,10 +68,8 @@ def build_flat_field( flat_file_names, read_noise, super_bias ):
     ----------
     flat_file_names : list
         List of file names (type str) for the raw flat field frames
-        
     read_noise : float
         The read noise (in ADU, converted from the header value which is given in electrons)
-        
     super_bias : HDUList
         Multi-extension FITS ImageHDU list with the median combined super bias and associated error created with build_super_bias.
 
@@ -81,7 +77,6 @@ def build_flat_field( flat_file_names, read_noise, super_bias ):
     -------
     flat_field : HDUList
         Multi-extension FITS ImageHDU list with the median combined flat field and associated error.
-
     """
     
     # Initialize an array to hold the flat field images
@@ -126,21 +121,17 @@ def make_bad_pixel_mask( super_bias, flat_field, bias_bpm_percentile, flat_field
     ----------
     super_bias : HDUList
         Multi-extension FITS ImageHDU list with the median combined super bias and associated error created with build_super_bias.
-        
     flat_field : HDUList
         Multi-extension FITS ImageHDU list with the median combined flat field and associated error created with build_flat_field.
-        
     bias_bpm_percentile : float
         The percentile above which super bias counts are marked as bad pixels (hot pixels). This is defined in the config file.
-
     flat_field_bpm_limit : float
         The flat field value below which a pixel is marked as bad. This is defined in the config file.
-
+        
     Returns
     -------
     bad_pixel_mask : FITSHDU
         The bad pixel mask created using the super bias and flat field. Bad pixels are valued 0, good pixels are valued 1.
-
     """
     
     # Get the super bias flux value for the percentile above which to label bad pixels, as defined in the top level config
@@ -170,20 +161,16 @@ def cal_image_2d_plot( image, figure_title, file_name, bpm = None ):
     ----------
     image : array
         The 2D array to show.
-        
     title : str
         The title of the plot (here to mark what type of image is plotted).
-        
     file_name : str
         The file name to save the plot to.
-        
     bpm : array, optional
         The 2D array defining the bad pixel mask. This can be input and overplotted the input data image. The default is None.
 
     Returns
     -------
     None.
-
     """
     
     plt.clf()
@@ -221,27 +208,16 @@ def build_calibrations( header_df, bias_frame_indices, flat_frame_indices, confi
     ----------
     header_df : pandas DataFrame
         The compiled information from the file headers.
-        
     bias_frame_indices : list
         List of indices of the bias frames for the header dataframe.
-        
     flat_frame_indices : list
         List of indices of the flat frames for the header dataframe.
-        
     config : dict
         The overall config file defined using YAML with all parameters for running the reduction and analysis pipeline.
 
     Returns
     -------
-    super_bias : HDUList
-        Multi-extension FITS ImageHDU list with the median combined super bias and associated error created with build_super_bias.
-        
-    flat_field : HDUList
-        Multi-extension FITS ImageHDU list with the median combined flat field and associated error created with build_flat_field.
-        
-    bad_pixel_mask : FITSHDU
-        The bad pixel mask created with make_bad_pixel_mask using the super bias and flat field.
-
+    None.
     """
     
     ### Build the files
