@@ -51,19 +51,10 @@ def build_images( file_indices, super_bias, flat_field, bad_pixel_mask, header_d
         # Bad pixel mask
         bpm = np.where( bad_pixel_mask[0].data == 0 )
         
-        # Set places where there is a bad pixel to the median of the frame flux, but with an extremely low S/N -- why not just nans?
-        placeholder_bad_value = np.nanmedian( frame_values )
-        placeholder_bad_error = np.nanmedian( frame_values ) / 1e-4
-        
-        frame_values[bpm] = placeholder_bad_value
-        frame_errors[bpm] = placeholder_bad_error
-        
-        # And set any nans to the same
-        nan_where = np.where( np.isnan( frame_values ) )
-    
-        frame_values[nan_where] = placeholder_bad_value
-        frame_errors[nan_where] = placeholder_bad_error
-        
+        # Set places where there is a bad pixel to nan. (Previous pipeline replaced these with values of very low S/N, but nans are now handled)        
+        frame_values[bpm] = np.nan
+        frame_errors[bpm] = np.nan
+                
         ### Set up the output image
         
         frame_value_hdu = fits.PrimaryHDU( frame_values, header = input_file[0].header )
