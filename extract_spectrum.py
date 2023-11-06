@@ -1,6 +1,7 @@
 """ Functions for extracting the echelle spectra.
 
 Created by DMK on 10/22/2023
+Last updated by DMK on 11/6/2023
 """
 
 ##### Imports
@@ -18,7 +19,23 @@ import tull_coude_utils
 
 ##### Functions
 
-def get_order_image_block( full_image, order_width, order_trace ):
+def get_order_image_block( full_image, order_trace, order_width ):
+    """ Function to pull a postage stamp image of a single order block from a full frame echellogram.
+
+    Parameters
+    ----------
+    full_image : array
+        The full frame flux image.
+    order_trace : array
+        The order trace to define the center of the order block. The array is 1D with size (number of dispersion pixels).
+    order_width : int
+        The cross dispersion pixel width of an order.
+
+    Returns
+    -------
+    output_image_block : array
+        The postage stamp image of an order around its trace. The array has shape (number of dispersion pixels, order_width).
+    """
     
     # An empty array to hold the image block
     output_image_block = np.zeros( ( order_trace.size, order_width ) )
@@ -35,6 +52,28 @@ def get_order_image_block( full_image, order_width, order_trace ):
     return output_image_block
 
 def sum_extraction( flux_image, err_image, num_pixels, order_width, background_option ):
+    """ Function to extract a 1D spectrum from a single order's 2D spectrum image using simple sum extraction.
+
+    Parameters
+    ----------
+    flux_image : array
+        The 2D spectrum (image block) of a single order to extract.
+    err_image : array
+        The 2D error spectrum (image block) of a single order to extract.
+    num_pixels : int
+        The number of dispersion pixels in an order.
+    order_width : int
+        The cross dispersion pixel width of an order.
+    background_option : str
+        A config entry that sets what to do with background subtraction. Must be either 'subtract' or 'none'.
+
+    Returns
+    -------
+    flux_sum_extract : array
+        The 1D extracted flux spectrum for the input order.
+    err_sum_extract : array
+        The 1D extracted flux error spectrum for the input order.
+    """
     
     ### Empty arrays to hold the output!
     flux_sum_extract = np.full( num_pixels, np.nan )
@@ -77,6 +116,28 @@ def sum_extraction( flux_image, err_image, num_pixels, order_width, background_o
     return flux_sum_extract, err_sum_extract
 
 def optimal_extraction( flux_image, err_image, num_pixels, order_width, background_option ):
+    """ Function to extract a 1D spectrum from a single order's 2D spectrum using optimal extraction.
+
+    Parameters
+    ----------
+    flux_image : array
+        The 2D spectrum (image block) of a single order to extract.
+    err_image : array
+        The 2D error spectrum (image block) of a single order to extract.
+    num_pixels : int
+        The number of dispersion pixels in an order.
+    order_width : int
+        The cross dispersion pixel width of an order.
+    background_option : str
+        A config entry that sets what to do with background subtraction. Must be either 'fixed' (background value is fixed based on the edges of the order image) or 'fit' (where it is a free parameter in the pixel slice fitting).
+
+    Returns
+    -------
+    flux_opt_extract : array
+        The 1D extracted flux spectrum for the input order.
+    err_opt_extract : array
+        The 1D extracted flux error spectrum for the input order.
+    """
     
     ### Empty arrays to hold the output!
     flux_opt_extract = np.full( num_pixels, np.nan )
@@ -241,6 +302,27 @@ def optimal_extraction( flux_image, err_image, num_pixels, order_width, backgrou
 ##### Main wrapper function
 
 def extract_spectrum( file_indices, trace, header_df, extraction_method, background_option, config ):
+    """ Main function to run to extract 1D spectra from the processed 2D image of the echellogram. It writes out the extracted spectrum as a FITS file.
+
+    Parameters
+    ----------
+    file_indices : array
+        List of indices (in the header information file) for frames to extract.
+    trace : array
+        The order trace as created with "trace_echelle" and read in from the "trace.fits" file.
+    header_df : pandas DataFrame
+        The compiled information from the file headers.
+    extraction_method : str
+        The extraction method to use, taken from the main config file. Currently must be either 'optimal_extraction' or 'sum_extraction'.
+    background_option : str
+        A config entry that sets what to do with background subtraction. For optimal extraction must be either 'fixed' or 'fit'. For sum extraction must be either 'subtract' or 'none'.
+    config : dict
+        The overall config file defined using YAML with all parameters for running the reduction and analysis pipeline.
+
+    Returns
+    -------
+    None.
+    """
     
     # If flagged in the config, reverse the order trace array
     if config['extraction']['reverse_traced_orders']:
@@ -275,8 +357,8 @@ def extract_spectrum( file_indices, trace, header_df, extraction_method, backgro
         for order in range( num_orders ):
             
             ### Pull out the flux and error image blocks around the trace
-            flux_order_image = get_order_image_block( flux_full_image, config['extraction']['order_xdisp_width_extract'], trace[order] )
-            err_order_image  = get_order_image_block( err_full_image, config['extraction']['order_xdisp_width_extract'], trace[order] )
+            flux_order_image = get_order_image_block( flux_full_image, trace[order], config['extraction']['order_xdisp_width_extract'] )
+            err_order_image  = get_order_image_block( err_full_image, trace[order], config['extraction']['order_xdisp_width_extract'] )
             
             if extraction_method == 'optimal_extraction':
                 extracted_flux[order], extracted_err[order] = optimal_extraction( flux_order_image, err_order_image, num_pixels, config['extraction']['order_xdisp_width_extract'], background_option )
