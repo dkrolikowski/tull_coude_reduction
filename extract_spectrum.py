@@ -34,6 +34,45 @@ def get_order_image_block( full_image, order_width, order_trace ):
         
     return output_image_block
 
+def sum_extraction( flux_image, err_image, num_pixels, order_width, background_option ):
+    
+    ### Empty arrays to hold the output!
+    flux_sum_extract = np.full( num_pixels, np.nan )
+    err_sum_extract  = np.full( num_pixels, np.nan )
+    
+    ### Get a background value if the config says to background subtract
+    
+    if background_option == 'fixed':
+        # Fit a polynomial to the counts across the top of the order image. A 2nd order polynomial, iterating once for a 10 sigma rejection
+        background_top_fit = tull_coude_utils.polynomial_fit_sigma_reject( np.arange( num_pixels ), np.mean( flux_image[:,:2], axis = 1 ), 2, 10, 1 )
+        
+        # Fit a polynomial to the counts across the bottom of the order image. A 2nd order polynomial, iterating once for a 10 sigma rejection
+        background_bottom_fit = tull_coude_utils.polynomial_fit_sigma_reject( np.arange( num_pixels ), np.mean( flux_image[:,-2:], axis = 1 ), 2, 10, 1 )
+
+
+    ### Now loop through each of the dispersion pixels
+    for pixel in range( num_pixels ):
+
+        ### First pull out the order cross dispersion slice -- flux and error
+        flux_slice = flux_image[pixel]
+        err_slice  = err_image[pixel]
+
+        ### Get the background -- if no subtraction is requested set it to 0
+        if background_option == 'subtract':
+
+            background = 0.5 * ( np.polyval( background_top_fit, pixel ) + np.polyval( background_bottom_fit, pixel ) )
+            
+        elif background_option == 'none':
+            
+            background = 0
+            
+        ### Sum extract! Simple sum of the background subtracted slice
+        
+        flux_sum_extract[pixel] = np.nansum( flux_slice - background )
+        err_sum_extract[pixel]  = np.sqrt( np.nansum( err_slice ** 2.0 + background ) )
+
+    return flux_sum_extract, err_sum_extract
+
 def optimal_extraction( flux_image, err_image, num_pixels, order_width, background_option ):
     
     ### Empty arrays to hold the output!
