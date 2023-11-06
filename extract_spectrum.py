@@ -11,6 +11,7 @@ from astropy.io import fits
 from scipy.optimize import curve_fit
 from scipy.stats import median_abs_deviation
 
+from datetime import datetime
 import os
 
 import tull_coude_utils
@@ -20,10 +21,10 @@ import tull_coude_utils
 def get_order_image_block( full_image, order_width, order_trace ):
     
     # An empty array to hold the image block
-    output_image_block = np.zeros( ( full_image.shape[1], order_width ) )
+    output_image_block = np.zeros( ( order_trace.size, order_width ) )
     
     # Go through each of the dispersion pixels and pull out the order image
-    for pixel in range( full_image.shape[1] ):
+    for pixel in range( order_trace.size ):
         
         # Get the bottom and top edge of the order given the trace and cross dispersion order width
         bottom_edge = np.round( order_trace[pixel] ).astype( int ) - order_width // 2
@@ -197,12 +198,12 @@ def optimal_extraction( flux_image, err_image, num_pixels, order_width, backgrou
 
 ##### Main wrapper function
 
-def extract_spectrum( file_indices, trace, header_df, config ):
+def extract_spectrum( file_indices, trace, header_df, extraction_method, config ):
     
     # If flagged in the config, reverse the order trace array
     if config['extraction']['reverse_traced_orders']:
         trace = trace[::-1]
-        
+                
     # The number of orders
     num_orders = trace.shape[0]
     
@@ -215,8 +216,10 @@ def extract_spectrum( file_indices, trace, header_df, config ):
         ### Set up the frame to extract
         
         # The raw file name to read in and read it in
-        file_name  = os.path.join( 'object_files', 'tullcoude_{}.fits'.format( header_df['file_token'].values[i_file] ) )
+        file_name  = os.path.join( config['paths']['reduction_dir'], 'object_files', 'tullcoude_{}.fits'.format( header_df['file_token'].values[i_file] ) )
         input_file = fits.open( file_name )
+        
+        print( 'Extracting frame {}'.format( header_df['file_token'].values[i_file] ) )
         
         # Pull out the file's flux and error images
         flux_full_image = input_file[0].data        
@@ -233,10 +236,30 @@ def extract_spectrum( file_indices, trace, header_df, config ):
             flux_order_image = get_order_image_block( flux_full_image, config['extraction']['order_xdisp_width_extract'], trace[order] )
             err_order_image  = get_order_image_block( err_full_image, config['extraction']['order_xdisp_width_extract'], trace[order] )
             
-            if extraction_method == 'optimal':
-                optimal_extraction( flux_order_image, err_order_image, config['extraction']['background_subtraction'] )
-            elif extraction_method == 'sum':
-                sum_extraction()
+            if extraction_method == 'optimal_extraction':
+                extracted_flux[order], extracted_err[order] = optimal_extraction( flux_order_image, err_order_image, num_pixels, config['extraction']['order_xdisp_width_extract'], config['extraction']['background_subtraction'] )
+            elif extraction_method == 'sum_extraction':
+                extracted_flux[order], extracted_err[order] = sum_extraction()
         
+        ### Write out the file with the extracted spectrum!
         
+        ### Set up the output image
+        
+        output_primary_hdu = fits.PrimaryHDU( header = input_file[0].header )
+        extracted_flux_hdu = fits.ImageHDU( extracted_flux, name = 'extracted flux' )
+        extracted_err_hdu  = fits.ImageHDU( extracted_err, name = 'extracted flux error' )
+        
+        output_file = fits.HDUList( [ output_primary_hdu, extracted_flux_hdu, extracted_err_hdu ] )
+        
+        # Additions to the header
+        
+        output_file[0].header['NORDERS']  = ( num_orders, 'Number of extracted orders' )
+        output_file[0].header['EXTRACT']  = ( extraction_method, 'Extraction method used' )
+        output_file[0].header['BGSUB']    = ( config['extraction']['background_subtraction'], 'Background subtraction option used' )
+        output_file[0].header['ORDWIDTH'] = ( config['extraction']['order_xdisp_width_extract'], 'Cross dispersion order pixel width' )
+        
+        output_file[0].header['HISTORY'] = 'Spectrum extracted on {}'.format( datetime.strftime( datetime.now(), '%Y/%m/%d' ) )
+                
+        output_file.writeto( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ), overwrite = True )
+
     return None
