@@ -53,14 +53,34 @@ def find_arc_lamp_lines( flux, config ):
         
         mad_peak_threshold = stats.median_abs_deviation( flux, nan_policy = 'omit', scale = 'normal' )
 
-    elif config['wavecal']['peak_threshold_mad_method'] == 'spectrum_chunks':
+    elif config['wavecal']['peak_threshold_mad_method'] == 'chunk_spectrum':
         
         mad_peak_threshold = get_flux_mad_from_spectral_chunks( flux )
         
     ### Now find the peaks using scipy signal's find peak algorithm, with the prominence threshold based on the "noise" estimate of the spectrum
     
-    peak_pixels_initial, peak_properties = signal.find_peaks( flux, distance = X, width = [ X, X ], prominence = X * mad_peak_threshold )
+    peak_pixels_initial, peak_properties = signal.find_peaks( flux, distance = config['wavecal']['lamp_line_min_separation_pix'], width = config['wavecal']['lamp_line_pix_width_limits'], prominence = config['wavecal']['lamp_line_peak_threshold_sigma'] * mad_peak_threshold )
     
+    # Now go through each of the lines found and fit with a Gaussian to get the decimal pixel centroid
+    
+    peak_pixels_initial_fit = np.full( peak_pixels_initial.size, np.nan )
+    
+    for i_peak, peak in enumerate( peak_pixels_initial ):
+        
+        # Get the fit location: within +/- the config 'lamp_line_min_separation_pix' of the peak centroid
+        fit_range = np.arange( peak - config['wavecal']['lamp_line_min_separation_pix'], peak + config['wavecal']['lamp_line_min_separation_pix'] + 1 )
+        # Get rid of any nans!
+        fit_range = np.intersect1d( fit_range, np.where( np.isfinite( flux ) )[0] )
+
+        # The initial guess for 1D gaussian line parameters: the flux at the found centroid, the found int centroid, the minimum of the config 'lamp_line_pix_width_limits', and 0
+        p_guess = [ flux[peak], peak, min( config['wavecal']['lamp_line_pix_width_limits'] ), 0 ]
+        
+        # Fit!
+        line_fit, _ = optimize.curve_fit( tull_coude_utils.gaussian_1d, fit_range, flux[fit_range], p0 = p_guess )
+        
+        # Output the new fit centroid
+        peak_pixels_initial_fit[i_peak] = line_fit[1]
+        
     return None
 
 ##### Main wrapper script for wavelength calibration
