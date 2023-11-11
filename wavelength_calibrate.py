@@ -42,6 +42,20 @@ def get_flux_mad_from_spectral_chunks( flux, chunk_size = 50 ):
     return median_chunk_mad
 
 def find_arc_lamp_line_pixel_centers( flux, config ):
+    """ Function to find lines in an input arc lamp spectrum using scipy.signal's find_peaks algorithm, with options set in the config file.
+
+    Parameters
+    ----------
+    flux : array
+        The flux spectrum array.
+    config : dict
+        The overall config file defined using YAML with all parameters for running the reduction and analysis pipeline.
+
+    Returns
+    -------
+    peak_pixels_initial_fit : array
+        The array of pixel centroids found as lines in the input flux spectrum.
+    """
     
     ### First prepare from input flux spectrum: normalize it and get noise estimate
     
@@ -76,11 +90,17 @@ def find_arc_lamp_line_pixel_centers( flux, config ):
         p_guess = [ flux[peak], peak, min( config['wavecal']['lamp_line_pix_width_limits'] ), 0 ]
         
         # Fit!
-        line_fit, _ = optimize.curve_fit( tull_coude_utils.gaussian_1d, fit_range, flux[fit_range], p0 = p_guess )
+        try:
+            line_fit, _ = optimize.curve_fit( tull_coude_utils.gaussian_1d, fit_range, flux[fit_range], p0 = p_guess )
+        except:
+            continue
         
         # Output the new fit centroid
         peak_pixels_initial_fit[i_peak] = line_fit[1]
         
-    return None
+    # Get rid of any nans!
+    peak_pixels_initial_fit = peak_pixels_initial_fit[np.isfinite( peak_pixels_initial_fit )]
+        
+    return peak_pixels_initial_fit
 
 ##### Main wrapper script for wavelength calibration
