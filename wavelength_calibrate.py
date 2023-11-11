@@ -41,7 +41,7 @@ def get_flux_mad_from_spectral_chunks( flux, chunk_size = 50 ):
 
     return median_chunk_mad
 
-def find_arc_lamp_lines( flux, config ):
+def find_arc_lamp_line_pixel_centers( flux, config ):
     
     ### First prepare from input flux spectrum: normalize it and get noise estimate
     
