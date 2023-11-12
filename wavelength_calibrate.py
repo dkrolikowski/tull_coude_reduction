@@ -185,9 +185,43 @@ def fit_wavelength_solution( pixel_centroids, prelim_wavelengths, line_list_wave
 
 ### Plotting functions
 
-def plot_wavelength_fit_iteration_spectra():
+def plot_wavelength_fit_iteration_spectra( fit_record, flux, arc_ref_wavelength, arc_ref_flux, file_name ):
     
-    
+    ### Wrap everything in one multi-page PDF -- one page for each iteration
+    with PdfPages( file_name ) as pdf:
+        
+        ### Go through each iteration, but reverse them -- the last iteration is plotted on the first page, and so on
+        for i_iter in reversed( range( len( fit_record['pixel'] ) ) ):
+            
+            # Make the wavelength solution for this iteration
+            wavelength_solution = np.polyval( fit_record['poly_coeffs'][i_iter], np.arange( flux.size ) )
+            
+            # Make the figure
+            plt.figure( figsize = ( 12, 6 ) )
+            
+            # Plot the spectra! Normalize by the median
+            plt.plot( wavelength_solution, flux / np.nanmedian( flux ), '#323232', lw = 1.25, label = 'Data Flux' )
+            
+            # Plot the reference ThAr spectrum. Normalize by the median and then x10 so it is offset from the data flux
+            ref_plot_loc = np.where( ( arc_ref_wavelength >= wavelength_solution.min() - 5 ) & ( arc_ref_wavelength <= wavelength_solution.max() + 5 ) )[0]
+            plt.plot( arc_ref_wavelength[ref_plot_loc], arc_ref_flux[ref_plot_loc] / np.nanmedian( arc_ref_flux[ref_plot_loc] ) * 10, '#bf3465', lw = 1.0, label = 'Reference Arc Spectrum' )
+            
+            # Plot the lines
+            for line_wavelength in fit_record['wavelength'][i_iter]:
+                plt.axvline( x = line_wavelength, c = '#1c6ccc', lw = 0.75, ls = '--' )
+            
+            ### Labels and such
+            plt.xlabel( 'Wavelength (${\\rm\AA}$)' )
+            plt.ylabel( 'Flux' )
+            plt.title( 'Lines Used: {}'.format( fit_record['wavelength'][i_iter].size ) )
+
+            plt.legend( fontsize = 'small' )
+            
+            plt.gca().set_yscale( 'log' )
+            
+            pdf.savefig( bbox_inches = 'tight', pad_inches = 0.05 )
+            plt.close()
+
     return None
 
 def plot_wavelength_fit_iteration_residuals( fit_record, file_name, vel_resid_sigma_reject ):
@@ -242,15 +276,27 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
     # The arc lamp line list
     lamp_line_list = np.load( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['line_list'] ) )
     
+    # Read in the wavelength vs flux CSV of the ThAr photron reference spectrum
+    arc_ref_spectrum = pd.read_csv( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['arc_ref_file'] ) )
+    
     ### Go through each of the input file indices for the arc lamps to use
     for i_file in arc_file_indices:
         
         file_in = fits.open( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ) )
         
+        # Make directory for this frame's wavelength solution
+        frame_dir_path = os.path.join( config['paths']['reduction_dir'], 'wavecal', header_df['file_token'].values[i_file] )
+        
+        # Make the sub-directories for each of the types of plots
+        for plot_dir_name in [ 'fit_residuals', 'fit_iter_spectra', 'final_sol_spectra_zoom' ]:
+            os.makedirs( os.path.join( frame_dir_path, plot_dir_name ), exist_ok = True )
+        
         print( 'Wavelength solving frame {}'.format( header_df['file_token'].values[i_file] ) )
         
         # Go order by order and get wavelength solution
         for order in range( config['trace']['number_of_orders'] ):
+            
+            ### Fit the wavelength solution
             
             # Get the peak centroids
             lamp_line_pixel_centroids = find_arc_lamp_line_pixel_centers( file_in[1].data[order], config )
@@ -258,9 +304,15 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
             # Fit the wavelength solution
             wavelength_solution_poly_coeffs, wavelength_solution_fit_record = fit_wavelength_solution( lamp_line_pixel_centroids, wavelength_solution_guess[order], lamp_line_list, config )
             
-            # Make any plots!
-            plot_file_name = os.path.join( config['paths']['reduction_dir'], 'wavecal', 'fit_residuals_order_{}.pdf'.format( order ) )
+            ### Make any plots!
+
+            # The fit velocity residuals
+            plot_file_name = os.path.join( frame_dir_path, 'fit_residuals', 'fit_residuals_order_{}.pdf'.format( order ) )
             plot_wavelength_fit_iteration_residuals( wavelength_solution_fit_record, plot_file_name, config['wavecal']['vel_resid_sigma_reject'] )
+            
+            # The spectra for each of the fits
+            plot_file_name = os.path.join( frame_dir_path, 'fit_iter_spectra', 'fit_iter_spectra_order_{}.pdf'.format( order ) )
+            plot_wavelength_fit_iteration_spectra( wavelength_solution_fit_record, file_in[1].data[order], arc_ref_spectrum['wavelength'].values, arc_ref_spectrum['flux'].values, plot_file_name )
 
     ### Then apply the wavelength solution to all of the extracted spectra
     
