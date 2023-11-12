@@ -13,6 +13,7 @@ from astropy.io import fits
 from scipy import optimize, signal, stats
 
 import glob
+import os
 import tqdm
 
 import tull_coude_utils
@@ -104,3 +105,27 @@ def find_arc_lamp_line_pixel_centers( flux, config ):
     return peak_pixels_initial_fit
 
 ##### Main wrapper script for wavelength calibration
+
+def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
+    
+    ##### First make the wavelength solution!
+    
+    ### Go through each of the input file indices for the arc lamps to use
+    for i_file in arc_file_indices:
+        
+        file_in = fits.open( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ) )
+        
+        # Go order by order and get wavelength solution
+        for order in range( config['trace']['number_of_orders'] ):
+            
+            # Get the peak centroids
+            lamp_line_pixel_centroids = find_arc_lamp_line_pixel_centers( file_in[1].data[order], config )
+            
+            # Fit the wavelength solution
+            order_wavelength_solution = get_wavelength_solution( lamp_line_pixel_centroids, config )
+            
+            # Make any plots!
+
+    ### Then apply the wavelength solution to all of the extracted spectra
+    
+    return None
