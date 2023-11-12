@@ -105,30 +105,34 @@ def find_arc_lamp_line_pixel_centers( flux, config ):
     return peak_pixels_initial_fit
 
 def fit_wavelength_solution( pixel_centroids, prelim_wavelengths, line_list_wavelengths, config ):
-    """
+    """ Function to fit a polynomial wavelength solution, iterating based on sigma rejection with the fit.
 
     Parameters
     ----------
-    pixel_centroids : TYPE
-        DESCRIPTION.
-    prelim_wavelengths : TYPE
-        DESCRIPTION.
-    line_list_wavelengths : TYPE
-        DESCRIPTION.
-    config : TYPE
-        DESCRIPTION.
+    pixel_centroids : array
+        The array of pixel centroid locations (dependent variable for the wavelength solution).
+    prelim_wavelengths : array
+        A preliminary guess for the wavelength solution (shape same as the output spectrum).
+    line_list_wavelengths : array
+        The array of line list wavelengths for the arc lamp used to match to.
+    config : dict
+        The overall config file defined using YAML with all parameters for running the reduction and analysis pipeline.
 
     Returns
     -------
-    wave_poly_fit : TYPE
-        DESCRIPTION.
-    line_centroid_record : TYPE
-        DESCRIPTION.
-
+    wave_poly_fit : array
+        The final adopted polynomial fit coefficients for the wavelength solution (wavelength as a function of pixel). Size is the polynomial degree + 1.
+    line_centroid_record : dict
+        A dictionary containing a record of the fitting iterations. Each entry is a list of arrays, with each entry being a subsequent fitting iteration.
+        Contains keys:
+            'pixel': the pixel centroids used in the fit iteration.
+            'wavelength': the corresponding wavelength centroids use in the fit iteration.
+            'vel_resid': the residuals between the input wavelength centroids and polynomial fit values in velocity (km/s)
+            'poly_coeffs': that iteration's polynomial fit coefficients. The last entry is the same as the output 'wave_poly_fit'
     """
     
     # Turn the pixel centroids into wavelength centroids based on the initial wavelength solution guess
-    wavelength_centroids_init = np.interp( pixel_centroids, np.arange( 2048 ), prelim_wavelengths )
+    wavelength_centroids_init = np.interp( pixel_centroids, np.arange( prelim_wavelengths.size ), prelim_wavelengths )
     
     ### Now get the line list wavelength for the found peaks
     
