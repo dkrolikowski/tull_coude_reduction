@@ -104,6 +104,120 @@ def find_arc_lamp_line_pixel_centers( flux, config ):
         
     return peak_pixels_initial_fit
 
+def fit_wavelength_solution( pixel_centroids, prelim_wavelengths, line_list_wavelengths, config ):
+    
+    wavsol = np.zeros( len(spec) ) # Initialize the wavelength solution for this order
+
+    # Find peaks in the arc spectrum!
+    pixcent, wavcent = Find_Peaks( wav, spec, specsig, peaksnr = snr, minsep = minsep )
+
+    # Initialize kept/rejected peaks, and match to nearest in the THAR catalog
+    keeps = { 'pix': np.array([]), 'wav': np.array([]), 'line': np.array([]) }
+    rejs  = { 'pix': np.array([]), 'wav': np.array([]), 'line': np.array([]) }
+
+    for i in range( len( wavcent ) ): # Find matches to peaks in the THAR catalogue
+        dists    = np.absolute( THARcat - wavcent[i] )
+        mindist  = np.argmin( dists )
+
+        if dists[mindist] <= 1.0: # If the wavelengths of the lines are close keep them!
+            keeps['pix']  = np.append( keeps['pix'], pixcent[i] )
+            keeps['wav']  = np.append( keeps['wav'], wavcent[i] )
+            keeps['line'] = np.append( keeps['line'], THARcat[mindist] )
+
+    # Now actually do the fit!
+    dofit  = True
+    ploti  = 1
+    cutoff = 4.0 / 0.67449 # Corrects MAD to become sigma (x4)
+
+    while dofit:
+
+        # Polynomial fit to wavelength solution
+        res = np.polyfit( keeps['pix'], keeps['line'], Conf.WavPolyOrd, full = True )
+
+        wavparams  = res[0]
+        fitresult  = res[1:]
+        ptsfromfit = np.polyval( wavparams, keeps['pix'] )
+
+        # Calculate residuals in wavelength and velocity
+        wavresids  = ptsfromfit - keeps['line']
+        velresids  = wavresids / keeps['line'] * 3e5
+        resids     = { 'wav': wavresids, 'vel': velresids }
+        medabsdev  = np.median( np.abs( np.abs( resids['wav'] ) - np.median( np.abs( resids['wav'] ) ) ) )
+
+        # Determine which lines are outliers in wavelength and velocity residuals
+        velcut = np.sum( np.abs(resids['vel']) >= 5.0 )
+
+        # Reject points that are further away than the sigma cutoff
+        torej  = ( np.abs( resids['wav'] ) >= cutoff * medabsdev ) # | ( keeps['pix'] < 512 ) | ( keeps['pix'] > 1536 )
+
+        tokeep = np.logical_not( torej )
+        numrej = np.sum( torej )
+
+        if velcut > 0 and numrej != len(torej): # If there are points that are outliers!
+            if numrej > 0: # If there are points to reject based on wavelength residual
+
+                plotname = path + '/resids_round_' + str(ploti) + '.pdf'
+                Plot_WavSol_Resids( resids, keeps['line'], cutoff, plotname, tokeep = tokeep, toreject = torej )
+
+                pltwav = np.polyval( wavparams, np.arange( len( spec ) ) )
+                plt.clf()
+                plt.plot( pltwav, np.log10(spec), 'k-', lw = 1 )
+                plt.plot( THAR['wav'], THAR['logspec'], 'r-', lw = 1 )
+                plt.xlim( pltwav[0], pltwav[-1] )
+                for peak in keeps['line']:
+                    plt.axvline( x = peak, color = 'b', ls = ':', lw = 1 )
+                plt.savefig(path + '/rejplots/fullspec_' + str(ploti) + '.pdf'); plt.clf()
+
+                rejs['pix']  = keeps['pix'][torej]
+                rejs['wav']  = keeps['wav'][torej]
+                rejs['line'] = keeps['line'][torej]
+
+                keeps['pix']  = keeps['pix'][tokeep]
+                keeps['wav']  = keeps['wav'][tokeep]
+                keeps['line'] = keeps['line'][tokeep]
+
+                ploti += 1
+
+            # If there aren't points to reject via wavelength residual, but still velocity outliers, reduce the cutoff limit by 1 sigma
+            elif numrej == 0 and velcut > 0:
+                cutoff = cutoff - 1.0 / 0.67449
+
+            else: # Honestly a little unsure what this is doing....
+                if Conf.verbose: print( 'There is something seriously wrong.\n' )
+                if Conf.verbose: print( 'There are points > 0.2 km/s, but none are found to be rejected. FIX' )
+                flag = True
+                if plots:
+                    plotname = path + '/resids_round_' + str(ploti) + '_flag.pdf'
+                    Plot_WavSol_Resids( resids, keeps['line'], cutoff, plotname )
+                break
+
+        # If it wants to reject all the points! That's bad!
+        elif numrej == len(torej):
+            if plots:
+                plotname = path + '/resids_round_' + str(ploti) + '.pdf'
+                Plot_WavSol_Resids( resids, keeps['line'], cutoff, plotname, toreject = torej )
+            flag = True
+            dofit = False
+
+        # If it all works out fine!
+        else:
+            if plots:
+                plotname = path + '/resids_round_' + str(ploti) + '.pdf'
+                Plot_WavSol_Resids( resids, keeps['line'], cutoff, plotname, tokeep = tokeep )
+            flag = False
+            dofit = False
+
+    # Basically if there aren't enough peaks and the fit isn't well constrained
+    if fitresult[0].size == 0:
+        flag = True
+
+    # Full wavelength solution for the order
+    wavsol = np.polyval( wavparams, np.arange( len(spec) ) )
+
+    
+    
+    return wavelength_solution_coeffs
+
 ##### Main wrapper script for wavelength calibration
 
 def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
@@ -122,7 +236,7 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
             lamp_line_pixel_centroids = find_arc_lamp_line_pixel_centers( file_in[1].data[order], config )
             
             # Fit the wavelength solution
-            order_wavelength_solution = get_wavelength_solution( lamp_line_pixel_centroids, config )
+            order_wavelength_solution = fit_wavelength_solution( lamp_line_pixel_centroids, config )
             
             # Make any plots!
 
