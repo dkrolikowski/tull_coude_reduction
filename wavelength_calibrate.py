@@ -15,6 +15,7 @@ from scipy import optimize, signal, stats
 
 import glob
 import os
+import pickle
 import tqdm
 
 import tull_coude_utils
@@ -220,7 +221,7 @@ def plot_wavelength_fit_iteration_residuals( fit_record, file_name, vel_resid_si
             plt.xlabel( 'Wavelength (${\\rm\AA}$)' )
             plt.ylabel( 'Fit Velocity Residual (km/s)' )
             
-            plt.title( 'Lines Used: {}, Lines Rejected: {}, Cut-off Sigma: {}'.format( fit_record['wavelength'][i_iter].size, lines_rejected.size, vel_resid_sigma_reject ) )
+            plt.title( 'Lines Used: {}, Lines Rejected: {}, Residuals Sigma: {:.2f} km/s, Cut-off Sigma: {}'.format( fit_record['wavelength'][i_iter].size, lines_rejected.size, velocity_residual_mad, vel_resid_sigma_reject ) )
             
             pdf.savefig( bbox_inches = 'tight', pad_inches = 0.05 )
             plt.close()
@@ -233,10 +234,20 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
     
     ##### First make the wavelength solution!
     
+    ### Read things in that we need for fitting the wavelength solution
+    
+    # The preliminary wavelength solution guess
+    wavelength_solution_guess = np.load( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['wave_sol_guess'] ) )[1:]
+    
+    # The arc lamp line list
+    lamp_line_list = np.load( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['line_list'] ) )
+    
     ### Go through each of the input file indices for the arc lamps to use
     for i_file in arc_file_indices:
         
         file_in = fits.open( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ) )
+        
+        print( 'Wavelength solving frame {}'.format( header_df['file_token'].values[i_file] ) )
         
         # Go order by order and get wavelength solution
         for order in range( config['trace']['number_of_orders'] ):
@@ -245,9 +256,11 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
             lamp_line_pixel_centroids = find_arc_lamp_line_pixel_centers( file_in[1].data[order], config )
             
             # Fit the wavelength solution
-            order_wavelength_solution = fit_wavelength_solution( lamp_line_pixel_centroids, config )
+            wavelength_solution_poly_coeffs, wavelength_solution_fit_record = fit_wavelength_solution( lamp_line_pixel_centroids, wavelength_solution_guess[order], lamp_line_list, config )
             
             # Make any plots!
+            plot_file_name = os.path.join( config['paths']['reduction_dir'], 'wavecal', 'fit_residuals_order_{}.pdf'.format( order ) )
+            plot_wavelength_fit_iteration_residuals( wavelength_solution_fit_record, plot_file_name, config['wavecal']['vel_resid_sigma_reject'] )
 
     ### Then apply the wavelength solution to all of the extracted spectra
     
