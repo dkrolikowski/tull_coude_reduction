@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from astropy.io import fits
+from matplotlib.backends.backend_pdf import PdfPages
 from scipy import optimize, signal, stats
 
 import glob
@@ -180,6 +181,51 @@ def fit_wavelength_solution( pixel_centroids, prelim_wavelengths, line_list_wave
     # Return the final polynomial fit coefficients separate from the record dictionary for ease of access
     
     return wave_poly_fit, line_centroid_record
+
+### Plotting functions
+
+def plot_wavelength_fit_iteration_spectra():
+    
+    
+    return None
+
+def plot_wavelength_fit_iteration_residuals( fit_record, file_name, vel_resid_sigma_reject ):
+    
+    ### Wrap everything in one multi-page PDF -- one page for each iteration
+    with PdfPages( file_name ) as pdf:
+        
+        ### Go through each iteration, but reverse them -- the last iteration is plotted on the first page, and so on
+        for i_iter in reversed( range( len( fit_record['pixel'] ) ) ):
+            
+            # Make the figure
+            plt.figure( figsize = ( 12, 6 ) )
+            
+            # Plot the velocity residuals
+            plt.plot( fit_record['wavelength'][i_iter], fit_record['vel_resid'][i_iter], 'o', c = '#dfa5e5', mec = '#323232', mew = 0.5 )
+            
+            # Get the velocity residual MAD
+            velocity_residual_mad = stats.median_abs_deviation( fit_record['vel_resid'][i_iter], scale = 'normal', nan_policy = 'omit' )
+            
+            # Plot x's over the points that are rejected!
+            lines_rejected = np.where( np.abs( fit_record['vel_resid'][i_iter] - np.nanmedian( fit_record['vel_resid'][i_iter] ) ) > vel_resid_sigma_reject * velocity_residual_mad )[0]
+    
+            if lines_rejected.size > 0:
+                plt.plot( fit_record['wavelength'][i_iter][lines_rejected], fit_record['vel_resid'][i_iter][lines_rejected], 'x', c = '#bf3465', mew = 1.25, ms = 8 )
+            
+            # Plot horizontal lines at the +/- sigma rejection level
+            for i in [ -1, 1 ]:
+                plt.axhline( y = np.nanmedian( fit_record['vel_resid'][i_iter] ) + i * vel_resid_sigma_reject * velocity_residual_mad, ls = '--', lw = 1.25, c = '#323232' )
+                            
+            ### Labels and such
+            plt.xlabel( 'Wavelength (${\\rm\AA}$)' )
+            plt.ylabel( 'Fit Velocity Residual (km/s)' )
+            
+            plt.title( 'Lines Used: {}, Lines Rejected: {}, Cut-off Sigma: {}'.format( fit_record['wavelength'][i_iter].size, lines_rejected.size, vel_resid_sigma_reject ) )
+            
+            pdf.savefig( bbox_inches = 'tight', pad_inches = 0.05 )
+            plt.close()
+            
+    return None
 
 ##### Main wrapper script for wavelength calibration
 
