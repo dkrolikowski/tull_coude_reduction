@@ -356,6 +356,17 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
         
         print( 'Wavelength solving frame {}'.format( header_df['file_token'].values[i_file] ) )
         
+        ### Get the order offset to be applied to the preliminary solution if config is flagged to
+        if config['wavecal']['use_prelim_sol_order_offset']:
+            order_offset = order_offset_with_wave_sol_guess( wavelength_solution_guess, file_in['extracted flux'].data, arc_ref_spectrum['wavelength'].values, arc_ref_spectrum['flux'].values )
+            
+            # Don't calibrate with this file if the offset is bad! If it would be accessing an unallowed index of the wavelength solution guess (negative or larger than shape)
+            if order_offset < 0 or ( order_offset + file_in[1].data.shape[1] ) > wavelength_solution_guess.shape[0]:
+                continue
+            
+        else:
+            order_offset = 0
+                    
         all_orders_wave_sol_poly_coeffs = np.full( ( config['trace']['number_of_orders'], config['wavecal']['wave_cal_poly_order'] + 1 ), np.nan )
         all_orders_wave_sol = np.full( file_in[1].data.shape, np.nan )
         
@@ -368,7 +379,7 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
             lamp_line_pixel_centroids = find_arc_lamp_line_pixel_centers( file_in[1].data[order], config )
             
             # Fit the wavelength solution
-            wavelength_solution_poly_coeffs, wavelength_solution_fit_record = fit_wavelength_solution( lamp_line_pixel_centroids, wavelength_solution_guess[order], lamp_line_list, config )
+            wavelength_solution_poly_coeffs, wavelength_solution_fit_record = fit_wavelength_solution( lamp_line_pixel_centroids, wavelength_solution_guess[order+order_offset], lamp_line_list, config )
             
             all_orders_wave_sol_poly_coeffs[order] = wavelength_solution_poly_coeffs
             all_orders_wave_sol[order] = np.polyval( wavelength_solution_poly_coeffs, np.arange( all_orders_wave_sol.shape[1] ) )
