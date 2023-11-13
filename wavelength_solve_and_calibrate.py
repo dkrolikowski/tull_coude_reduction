@@ -15,11 +15,8 @@ from matplotlib.backends.backend_pdf import PdfPages
 from scipy import optimize, signal, stats, interpolate
 
 import os
-import tqdm
 
 import tull_coude_utils
-
-import pdb
 
 ##### Functions
 
