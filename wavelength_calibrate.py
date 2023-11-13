@@ -19,6 +19,8 @@ import tqdm
 
 import tull_coude_utils
 
+import pdb
+
 ##### Functions
 
 def order_offset_with_wave_sol_guess( prelim_wavelengths, obs_flux, ref_wavelength, ref_flux, order_use_range = [ 12, 40 ], offset_test_radius = 10 ):
@@ -297,7 +299,7 @@ def interpolate_wavelength_solution( jd_to_interpolate, jd_reference, wavelength
         
         wavelength_solution_flag = 'LINTERP'
 
-    return wavelength_solution_interpolate, wavelength_solution_flag
+    return wavelength_solution_interpolate.astype( float ), wavelength_solution_flag
 
 ### Plotting functions
 
@@ -541,7 +543,7 @@ def wavelength_solution( arc_file_indices, header_df, config ):
 
             # The fit velocity residuals
             plot_file_name = os.path.join( frame_dir_path, 'fit_residuals', 'fit_residuals_order_{}.pdf'.format( order ) )
-            plot_wavelength_fit_iteration_residuals( wavelength_solution_fit_record, plot_file_name, config['wavecal']['vel_resid_sigma_reject'] )
+            plot_wavelength_fit_iteration_residuals( wavelength_solution_fit_record, config['wavecal']['vel_resid_sigma_reject'], plot_file_name )
             
             # The spectra for each of the fits
             plot_file_name = os.path.join( frame_dir_path, 'fit_iter_spectra', 'fit_iter_spectra_order_{}.pdf'.format( order ) )
@@ -580,13 +582,11 @@ def wavelength_calibrate( obj_file_indices, arc_file_indices, header_df, config 
         file_in = fits.getdata( file_name, extname = 'wavelength' )
         
         arc_wavelength_solutions.append( file_in )
-        
-        file_in.close()
-        
+                
     arc_wavelength_solutions = np.array( arc_wavelength_solutions )
-        
+            
     ### Go through each of the input file indices for the arc lamps to use
-    for i_file in tqdm.tqdm( obj_file_indices ):
+    for i_file in obj_file_indices:
         
         # Interpolate the wavelength solution
         obj_wavelength_solution, obj_wavelength_solution_flag = interpolate_wavelength_solution( header_df['obs_jd'].values[i_file], header_df['obs_jd'].values[arc_file_indices], arc_wavelength_solutions )
@@ -596,10 +596,10 @@ def wavelength_calibrate( obj_file_indices, arc_file_indices, header_df, config 
         # Read in the spectrum file to append wavelength solution to
         file_name = os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) )
         file_in   = fits.open( file_name )
-        
+                
         # Build the output file
         output_file = fits.HDUList( [ file_in[0], file_in['extracted flux'], file_in['extracted flux error'], fits.ImageHDU( obj_wavelength_solution, name = 'wavelength' ) ] )
-                
+        
         # Add a header keyword to the primary HDU for the polynomial degree of the wavelength solution
         output_file[0].header['WAVPOLYD'] = ( config['wavecal']['wave_cal_poly_order'], 'Polynomial degree of wavelength solution' )
         
