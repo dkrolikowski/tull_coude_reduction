@@ -9,7 +9,7 @@ import pandas as pd
 
 from astropy.io import fits
 from astropy.time import Time
-from scipy.stats import median_abs_deviation
+from scipy import interpolate, stats
 
 import glob
 import re
@@ -117,14 +117,14 @@ def gaussian_1d( x_values, amplitude, mean, sigma, background ):
     
     return y_values
 
-def polynomial_fit_sigma_reject( x_data, y_data, polynomial_degree, num_sigma_cut, num_iterations, y_limits = None, return_data = False ):
+def polynomial_fit_sigma_reject( x_values, y_values, polynomial_degree, num_sigma_cut, num_iterations, y_limits = None, return_data = False ):
     """ Function to perform iterative polynomial fitting based on sigma rejection with the residuals
     
     Parameters
     ----------
-    x_data : array
+    x_values : array
         Array of x values to fit
-    y_data : array
+    y_values : array
         Array of y values to fit
     polynomial_degree : int
         Degree of the polynomial to fit
@@ -141,7 +141,7 @@ def polynomial_fit_sigma_reject( x_data, y_data, polynomial_degree, num_sigma_cu
     -------
     poly_fit : array
         The best fit polynomial coefficients, the output of numpy polyfit
-    x_data_to_fit : array, optional
+    x_values_to_fit : array, optional
         The x values included in the final fit that is output (after the iterative rejection). Returned if return_data is True.
     y_data_to_fit : array, optional
         The y values included in the final fit that is output (after the iterative rejection). Returned if return_data is True.
@@ -150,11 +150,11 @@ def polynomial_fit_sigma_reject( x_data, y_data, polynomial_degree, num_sigma_cu
     ### First -- get data to use in the first place: no nans and within parameter limits if they are given
     
     # Not nans
-    not_nan = np.where( np.isfinite( y_data ) )[0]
+    not_nan = np.where( np.isfinite( y_values ) )[0]
     
     # Y data within limits if they are given!
     if y_limits is not None:
-        within_limits = np.where( ( y_data > y_limits[0] ) & ( y_data < y_limits[1] ) )[0]
+        within_limits = np.where( ( y_values > y_limits[0] ) & ( y_values < y_limits[1] ) )[0]
         
         # Intersect with the not nans to get data to use
         to_fit = np.intersect1d( not_nan, within_limits )
@@ -163,37 +163,93 @@ def polynomial_fit_sigma_reject( x_data, y_data, polynomial_degree, num_sigma_cu
     else:
         to_fit = not_nan
                 
-    x_data_to_fit = x_data[to_fit]
-    y_data_to_fit = y_data[to_fit]
+    x_values_to_fit = x_values[to_fit]
+    y_values_to_fit = y_values[to_fit]
         
     ### Now do a first round fit!
 
-    poly_fit = np.polyfit( x_data_to_fit, y_data_to_fit, polynomial_degree )
+    poly_fit = np.polyfit( x_values_to_fit, y_values_to_fit, polynomial_degree )
     
     ### Now loop through the number of iterations!
     
     for i_iter in range( num_iterations ):
         
         # Get the residuals
-        fit_residuals = y_data_to_fit - np.polyval( poly_fit, x_data_to_fit )
+        fit_residuals = y_values_to_fit - np.polyval( poly_fit, x_values_to_fit )
         
         # The standard deviation (scaled MAD) of the residuals
-        fit_residuals_stdev = median_abs_deviation( fit_residuals, nan_policy = 'omit', scale = 'normal' )
+        fit_residuals_stdev = stats.median_abs_deviation( fit_residuals, nan_policy = 'omit', scale = 'normal' )
                 
         ### Another fit, where residuals are within the provide number of sigma for cutting
         
         to_fit = np.where( np.abs( fit_residuals ) < num_sigma_cut * fit_residuals_stdev )[0]
         
         # Re-define the arrays to fit
-        x_data_to_fit = x_data_to_fit[to_fit]
-        y_data_to_fit = y_data_to_fit[to_fit]
+        x_values_to_fit = x_values_to_fit[to_fit]
+        y_values_to_fit = y_values_to_fit[to_fit]
         
-        poly_fit = np.polyfit( x_data_to_fit, y_data_to_fit, polynomial_degree )
+        poly_fit = np.polyfit( x_values_to_fit, y_values_to_fit, polynomial_degree )
     
     if return_data:
-        return poly_fit, x_data_to_fit, y_data_to_fit
+        return poly_fit, x_values_to_fit, y_values_to_fit
     else:
         return poly_fit
 
+def continuum_fit_with_spline( x_values, y_values, x_knot_spacing, lower_sigma_reject, upper_sigma_reject, max_iter = 10 ):
+    """ Function to fit a spline to a spectrum with sigma rejection. Different sigma rejection levels below and above the fit are allowed (i.e. get rid of absorption lines)
+    It is assumed that no nans are present in the data provided.
+
+    Parameters
+    ----------
+    x_values : array
+        Array of x values to fit (independent variable, e.g. wavelength).
+    y_values : array
+        Array of y values to fit (dependent variable, e.g. flux).
+    x_knot_spacing : float
+        The knot spacing for the B spline.
+    lower_sigma_reject : float
+        The sigma level to reject points below the fit.
+    upper_sigma_reject : float
+        The sigma level to reject points above the fit.
+    max_iter : int, optional
+        The maximum number of sigma rejection iterations to perform. The default is 10.
+
+    Returns
+    -------
+    spline_fit : tuple
+        The tuple defining the best fit spline, as output by scipy.interpolate. Elements are (spline knot array, spline coefficient array, spline degree).
+    """
+    
+    # Set the knots array. Keep in mind they must be interior knots, so start at the x value minimum + break space
+    spline_knots = np.arange( x_values.min() + x_knot_spacing, x_values.max(), x_knot_spacing )
+    
+    # Set the values to fit array, will be modified in the rejection loop below
+    x_values_to_fit = x_values.copy()
+    y_values_to_fit = y_values.copy()
+
+    # Loop for the maximum number of iterations, unless an iteration sooner results in no rejections
+    for i_iter in range( max_iter ):
+
+        # Get the b spline representation of the data
+        spline_fit = interpolate.splrep( x_values_to_fit, y_values_to_fit, k = 3, t = spline_knots )
+
+        # Calculate the residuals bewteen the data values and the spline fit
+        residuals = y_values_to_fit - interpolate.splev( x_values_to_fit, spline_fit )
+
+        # Get the standard deviation of the residuals, using the MAD
+        residuals_mad = stats.median_abs_deviation( residuals, scale = 'normal' )
+
+        # Keep points within the lower/upper sigma level provided
+        within_mad = np.where( ( residuals < np.nanmedian( residuals ) + upper_sigma_reject * residuals_mad ) & ( residuals > np.nanmedian( residuals ) - lower_sigma_reject * residuals_mad ) )[0]
+
+        # If no points are rejected, break out of the loop!
+        if within_mad.size == y_values_to_fit.size:
+            break
+
+        # Re-define the x and y values to fit -- get rid of MAD rejected points
+        x_values_to_fit = x_values_to_fit[within_mad]
+        y_values_to_fit = y_values_to_fit[within_mad]
+        
+    return spline_fit
 
 
