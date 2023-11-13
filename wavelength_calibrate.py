@@ -72,7 +72,7 @@ def order_offset_with_wave_sol_guess( prelim_wavelengths, flux, arc_ref_waveleng
     
             # Calculate the residuals between the reference and data spectrum -- normalize each by the median
             residuals = flux[order] / np.nanmedian( flux[order] ) - arc_ref_flux_interp / np.nanmedian( arc_ref_flux_interp )
-    
+                
             # Calculate and output the summed absolute residuals
             sum_abs_residuals[i_offset] = np.nansum( np.abs( residuals ) )
     
@@ -263,6 +263,48 @@ def fit_wavelength_solution( pixel_centroids, prelim_wavelengths, line_list_wave
 
 ### Plotting functions
 
+def plot_spectra_zoom_windows( wavelength, flux, arc_ref_wavelength, arc_ref_flux, lines_used_wavelength, file_name, window_size = 10, number_of_subplots = 6 ):
+        
+    number_of_pages = int( np.ceil( np.ceil( np.ptp( wavelength ) / window_size ) / number_of_subplots ) )
+    
+    subplot_wave_start = wavelength.min()
+    
+    with PdfPages( file_name ) as pdf:
+        
+        for i_page in range( number_of_pages ):
+            
+            fig = plt.figure( figsize = ( 12, 8 ) )
+            
+            i_subplot = 1
+            
+            while subplot_wave_start <= wavelength.max() and i_subplot <= number_of_subplots:
+                
+                subplot_wave_end = subplot_wave_start + 12.0
+                
+                data_plot_loc = np.where( ( wavelength >= subplot_wave_start ) & ( wavelength <= subplot_wave_end ) )[0]
+                ref_plot_loc  = np.where( ( arc_ref_wavelength >= subplot_wave_start ) & ( arc_ref_wavelength <= subplot_wave_end ) )[0]
+                line_plot_loc = np.where( ( lines_used_wavelength >= subplot_wave_start ) & ( lines_used_wavelength <= subplot_wave_end ) )[0]
+                
+                fig.add_subplot( 230 + i_subplot )
+                
+                plt.plot( wavelength[data_plot_loc], ( flux / np.nanmedian( flux ) )[data_plot_loc], '#323232', lw = 1.25 )
+                
+                plt.plot( arc_ref_wavelength[ref_plot_loc], ( arc_ref_flux / np.nanmedian( arc_ref_flux ) )[ref_plot_loc] * 5, '#bf3465', lw = 1 )
+    
+                for line_wavelength in lines_used_wavelength[line_plot_loc]:
+                    plt.axvline( x = line_wavelength, c = '#1c6ccc', lw = 0.75, ls = '--' )
+                    
+                plt.yticks( [], [] )
+                plt.gca().set_yscale( 'log' )
+                                
+                subplot_wave_start += window_size
+                i_subplot += 1
+                
+            pdf.savefig( bbox_inches = 'tight', pad_inches = 0.05 )
+            plt.close()
+                
+    return None
+
 def plot_wavelength_fit_iteration_spectra( fit_record, flux, arc_ref_wavelength, arc_ref_flux, file_name ):
     
     ### Wrap everything in one multi-page PDF -- one page for each iteration
@@ -349,7 +391,7 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
     ### Read things in that we need for fitting the wavelength solution
     
     # The preliminary wavelength solution guess
-    wavelength_solution_guess = np.load( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['wave_sol_guess'] ) )[1:]
+    wavelength_solution_guess = np.load( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['wave_sol_guess'] ) )
     
     # The arc lamp line list
     lamp_line_list = np.load( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['line_list'] ) )
@@ -366,7 +408,7 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
         frame_dir_path = os.path.join( config['paths']['reduction_dir'], 'wavecal', header_df['file_token'].values[i_file] )
         
         # Make the sub-directories for each of the types of plots
-        for plot_dir_name in [ 'fit_residuals', 'fit_iter_spectra', 'final_sol_spectra_zoom' ]:
+        for plot_dir_name in [ 'fit_residuals', 'fit_iter_spectra', 'adopted_sol_spectra_zoom' ]:
             os.makedirs( os.path.join( frame_dir_path, plot_dir_name ), exist_ok = True )
         
         print( 'Wavelength solving frame {}'.format( header_df['file_token'].values[i_file] ) )
@@ -376,12 +418,13 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
             order_offset = order_offset_with_wave_sol_guess( wavelength_solution_guess, file_in['extracted flux'].data, arc_ref_spectrum['wavelength'].values, arc_ref_spectrum['flux'].values )
             
             # Don't calibrate with this file if the offset is bad! If it would be accessing an unallowed index of the wavelength solution guess (negative or larger than shape)
-            if order_offset < 0 or ( order_offset + file_in[1].data.shape[1] ) > wavelength_solution_guess.shape[0]:
+            if order_offset < 0 or ( order_offset + file_in[1].data.shape[0] ) > wavelength_solution_guess.shape[0]:
                 continue
             
         else:
             order_offset = 0
                     
+        
         all_orders_wave_sol_poly_coeffs = np.full( ( config['trace']['number_of_orders'], config['wavecal']['wave_cal_poly_order'] + 1 ), np.nan )
         all_orders_wave_sol = np.full( file_in[1].data.shape, np.nan )
         
@@ -409,6 +452,11 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
             plot_file_name = os.path.join( frame_dir_path, 'fit_iter_spectra', 'fit_iter_spectra_order_{}.pdf'.format( order ) )
             plot_wavelength_fit_iteration_spectra( wavelength_solution_fit_record, file_in[1].data[order], arc_ref_spectrum['wavelength'].values, arc_ref_spectrum['flux'].values, plot_file_name )
             
+            plot_file_name = os.path.join( frame_dir_path, 'adopted_sol_spectra_zoom', 'spectra_zoom_order_{}.pdf'.format( order ) )
+            plot_spectra_zoom_windows( all_orders_wave_sol[order], file_in[1].data[order], arc_ref_spectrum['wavelength'].values, arc_ref_spectrum['flux'].values, wavelength_solution_fit_record['wavelength'][-1], plot_file_name )
+                        
+        np.save( os.path.join( frame_dir_path, 'poly_coeffs.npy' ), all_orders_wave_sol_poly_coeffs )
+        
         ### Output this frame's wavelength solution!
         
         # Re-build the output file rather than append to the input, in case of multiple runs
