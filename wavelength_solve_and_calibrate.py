@@ -500,7 +500,23 @@ def plot_wavelength_fit_iteration_residuals( fit_record, vel_resid_sigma_reject,
 
 ##### Main wrapper script for wavelength calibration
 
-def wavelength_solution( arc_file_indices, header_df, config ):
+def wavelength_solution( file_indices, header_df, config ):
+    """ Main function to run for fitting the wavelength solution of a set of reference source spectra (e.g. arc lamps).
+    Each reference source observation is read in, lines are found and matched to a line list, and the wavelength solution is iteratively fit with a polynomial. The wavelength solution is appended to the spectrum FITS file.
+
+    Parameters
+    ----------
+    file_indices : array
+        The file indices (in the header information file) of the reference source observations for wavelength solution fitting.
+    header_df : pandas DataFrame
+        The compiled information from the file headers.
+    config : dict
+        The overall config file defined using YAML with all parameters for running the reduction and analysis pipeline.
+
+    Returns
+    -------
+    None.
+    """
     
     ##### First make the wavelength solution!
     
@@ -516,7 +532,7 @@ def wavelength_solution( arc_file_indices, header_df, config ):
     arc_ref_spectrum = pd.read_csv( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['arc_ref_file'] ) )
     
     ### Go through each of the input file indices for the arc lamps to use
-    for i_file in arc_file_indices:
+    for i_file in file_indices:
         
         file_in = fits.open( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ) )
         
@@ -584,13 +600,31 @@ def wavelength_solution( arc_file_indices, header_df, config ):
             
     return None
 
-def wavelength_calibrate( obj_file_indices, arc_file_indices, header_df, config ):
-    
+def wavelength_calibrate( obj_file_indices, ref_file_indices, header_df, config ):
+    """ Main function to run to wavelength calibrate the observed science spectra.
+    The wavelength solutions fit for each of the reference source observations are interpolated onto the observation times of the other spectra.
+
+    Parameters
+    ----------
+    obj_file_indices : array
+        The file indices (in the header information file) of all observations with extracted spectra (including science frames and wavelength reference sources).
+    ref_file_indices : array
+        The file indices (in the header information file) of the reference source observations for wavelength solution fitting.
+    header_df : pandas DataFrame
+        The compiled information from the file headers.
+    config : dict
+        The overall config file defined using YAML with all parameters for running the reduction and analysis pipeline.
+
+    Returns
+    -------
+    None.
+
+    """
     ### Read in the arc wavelength solutions to use for interpolation
     
     arc_wavelength_solutions = []
     
-    for i_file in arc_file_indices:
+    for i_file in ref_file_indices:
         
         file_name = os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) )
         
@@ -604,7 +638,7 @@ def wavelength_calibrate( obj_file_indices, arc_file_indices, header_df, config 
     for i_file in obj_file_indices:
         
         # Interpolate the wavelength solution
-        obj_wavelength_solution, obj_wavelength_solution_flag = interpolate_wavelength_solution( header_df['obs_jd'].values[i_file], header_df['obs_jd'].values[arc_file_indices], arc_wavelength_solutions )
+        obj_wavelength_solution, obj_wavelength_solution_flag = interpolate_wavelength_solution( header_df['obs_jd'].values[i_file], header_df['obs_jd'].values[ref_file_indices], arc_wavelength_solutions )
         
         ### Output the wavelength calibrated file
         
