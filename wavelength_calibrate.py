@@ -321,16 +321,22 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
             
         ### Output this frame's wavelength solution!
         
-        # Append a new extension to the file
-        file_in.append( fits.ImageHDU( all_orders_wave_sol, name = 'wavelength' ) )
-        
+        # Re-build the output file rather than append to the input, in case of multiple runs
+        output_file = fits.HDUList( [ file_in[0], file_in['extracted flux'], file_in['extracted flux error'], fits.ImageHDU( all_orders_wave_sol, name = 'wavelength' ) ] )
+                
         # Add a header keyword to the primary HDU for the polynomial degree of the wavelength solution
-        file_in[0].header['WAVPOLYD'] = ( config['wavecal']['wave_cal_poly_order'], 'Polynomial degree of wavelength solution' )
+        output_file[0].header['WAVPOLYD'] = ( config['wavecal']['wave_cal_poly_order'], 'Polynomial degree of wavelength solution' )
         
         # Add a history entry to the primary HDU to mark that it is wavelength calibrated
-        file_in[0].header['HISTORY'] = 'Spectrum wavelength calibrated on {}'.format( datetime.strftime( datetime.now(), '%Y/%m/%d' ) )
+        output_file[0].header['HISTORY'] = 'Spectrum wavelength calibrated on {}'.format( datetime.strftime( datetime.now(), '%Y/%m/%d' ) )
 
         # Write out the file with the wavelength solution -- overwrite the previous file
-        file_in.writeto( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ), overwrite = True )
+        output_file.writeto( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ), overwrite = True )
         
     return None
+
+
+
+
+
+
