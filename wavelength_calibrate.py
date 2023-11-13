@@ -21,6 +21,70 @@ import tull_coude_utils
 
 ##### Functions
 
+def order_offset_with_wave_sol_guess( prelim_wavelengths, flux, arc_ref_wavelength, arc_ref_flux, order_use_range = [ 12, 40 ], offset_test_radius = 10 ):
+    """ Function to determine if there is an order offset between the wavelength solution guess and the observed spectrum.
+    It uses a reference arc lamp spectrum to calculate residuals with the observed lamp spectrum while shifting the wavelength solution guess to determine the best fit order offset.
+    It primarily works if the wavelength solution guess is already pretty good, and is used mostly for the wavelength solution guess having more orders than extracted (padding the calibration).
+
+    Parameters
+    ----------
+    prelim_wavelengths : array
+        The preliminary wavelength solution guess, with shape (number of orders, number of pixels). There can be a different number of orders than the extracted spectrum.
+    flux : array
+        The observed arc lamp flux spectrum, with shape (number of extracted orders, number of pixel).
+    arc_ref_wavelength : array
+        The wavelength array for the arc lamp reference spectrum.
+    arc_ref_flux : array
+        The flux array for the arc lamp reference spectrum.
+    order_use_range : list of int, optional
+        List of minimum and maximum orders to calculate the order offset for. The default is [ 12, 40 ].
+    offset_test_radius : int, optional
+        The order offset +/- each order to calculate residuals for. The default is 10.
+
+    Returns
+    -------
+    order_offset : int
+        The minimum residual order offset between the wavelength solution guess and observed spectrum.
+    """
+    
+    # The array of orders to calculate the best fit offset for
+    orders_to_use = np.arange( *order_use_range )
+    
+    # The offsets to test
+    order_offset_test_arr = np.arange( -offset_test_radius, offset_test_radius + 1 )
+    
+    # Offset to hold the offset with the minimum residual across test orders
+    offset_with_min_resid = np.full( orders_to_use.size, np.nan )
+    
+    # Go through each of the orders to test
+    for i_order, order in enumerate( orders_to_use ):
+    
+        sum_abs_residuals = np.full( order_offset_test_arr.size, np.nan )
+    
+        # Go through each offset
+        for i_offset, offset in enumerate( order_offset_test_arr ):
+    
+            # "shift" the wavelength solution guess by the order offset amount
+            test_wave = prelim_wavelengths[order+offset]
+    
+            # Interpolate the reference arc spectrum onto the wavelength solution guess
+            arc_ref_flux_interp = np.interp( test_wave, arc_ref_wavelength, arc_ref_flux )
+    
+            # Calculate the residuals between the reference and data spectrum -- normalize each by the median
+            residuals = flux[order] / np.nanmedian( flux[order] ) - arc_ref_flux_interp / np.nanmedian( arc_ref_flux_interp )
+    
+            # Calculate and output the summed absolute residuals
+            sum_abs_residuals[i_offset] = np.nansum( np.abs( residuals ) )
+    
+        # Find the offset with the minimum absolute residuals for this order
+        offset_with_min_resid[i_order] = order_offset_test_arr[np.nanargmin( sum_abs_residuals )]
+
+    # Find the minimum residual offset that is most common across all test orders
+    unique_order_offsets, order_offset_counts = np.unique( offset_with_min_resid, return_counts = True )
+    order_offset = int( unique_order_offsets[np.argmax(order_offset_counts)] )
+    
+    return order_offset
+
 def get_flux_mad_from_spectral_chunks( flux, chunk_size = 50 ):
         
     # The number of chunks from the input chunk size in pixels
