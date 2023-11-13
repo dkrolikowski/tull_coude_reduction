@@ -86,7 +86,22 @@ def order_offset_with_wave_sol_guess( prelim_wavelengths, flux, arc_ref_waveleng
     return order_offset
 
 def get_flux_mad_from_spectral_chunks( flux, chunk_size = 50 ):
-        
+    """ Function to get a noise estimate for the arc lamp spectrum by looking at the MAD of chunks of the spectrum.
+    Designed to reduce the influence of bleeding over of saturated Ar lines (and oxide bands to a lesser extent)
+
+    Parameters
+    ----------
+    flux : array
+        The observed spectrum flux array.
+    chunk_size : int, optional
+        The number of pixels in the spectral chunks to calculate the MAD within. The default is 50.
+
+    Returns
+    -------
+    median_chunk_mad : float
+        The median MAD calculated across all the spectral chunks.
+    """
+    
     # The number of chunks from the input chunk size in pixels
     number_of_chunks = flux.size // chunk_size
     
