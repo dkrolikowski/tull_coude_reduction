@@ -283,6 +283,24 @@ def wavelength_solution_post_process( wave_sol_coeffs ):
     return output_wave_sol_coeffs
 
 def interpolate_wavelength_solution( jd_to_interpolate, jd_reference, wavelength_solution_reference ):
+    """ Function to interpolate the wavelength solutions measured with the reference sources (e.g. arc lamps) to the times of science observations.
+
+    Parameters
+    ----------
+    jd_to_interpolate : float
+        The JD of the observation to interpolate to.
+    jd_reference : array
+        The array of JDs of the reference source observations.
+    wavelength_solution_reference : array
+        The wavelength solution for the reference source observations.
+
+    Returns
+    -------
+    wavelength_solution_interpolate : array
+        The interpolated wavelength solution at the input observation time.
+    wavelength_solution_flag : str
+        A string denoting what wavelength solution was adopted. Either 'LINTERP' to denote that it was linearly interpolated, or 'CLOSEST" to denote that it could not be interpolated and the closest reference solution was adopted.
+    """
     
     # First check if the observation is bounded by reference spectra -- if not just adopt the closest wavelength solution and return a flag
     if jd_reference.min() > jd_to_interpolate or jd_reference.max() < jd_to_interpolate:
@@ -295,11 +313,11 @@ def interpolate_wavelength_solution( jd_to_interpolate, jd_reference, wavelength
     else:
         interp_fn = interpolate.interp1d( jd_reference, wavelength_solution_reference, axis = 0, kind = 'linear' )
         
-        wavelength_solution_interpolate = interp_fn( jd_to_interpolate )
+        wavelength_solution_interpolate = interp_fn( jd_to_interpolate ).astype( float )
         
         wavelength_solution_flag = 'LINTERP'
-
-    return wavelength_solution_interpolate.astype( float ), wavelength_solution_flag
+        
+    return wavelength_solution_interpolate, wavelength_solution_flag
 
 ### Plotting functions
 
