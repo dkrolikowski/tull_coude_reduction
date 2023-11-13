@@ -9,7 +9,7 @@ import pandas as pd
 
 from astropy.io import fits
 from astropy.time import Time
-from scipy import interpolate, stats
+from scipy import stats
 
 import glob
 import re
@@ -194,62 +194,4 @@ def polynomial_fit_sigma_reject( x_values, y_values, polynomial_degree, num_sigm
         return poly_fit, x_values_to_fit, y_values_to_fit
     else:
         return poly_fit
-
-def continuum_fit_with_spline( x_values, y_values, x_knot_spacing, lower_sigma_reject, upper_sigma_reject, max_iter = 10 ):
-    """ Function to fit a spline to a spectrum with sigma rejection. Different sigma rejection levels below and above the fit are allowed (i.e. get rid of absorption lines)
-    It is assumed that no nans are present in the data provided.
-
-    Parameters
-    ----------
-    x_values : array
-        Array of x values to fit (independent variable, e.g. wavelength).
-    y_values : array
-        Array of y values to fit (dependent variable, e.g. flux).
-    x_knot_spacing : float
-        The knot spacing for the B spline.
-    lower_sigma_reject : float
-        The sigma level to reject points below the fit.
-    upper_sigma_reject : float
-        The sigma level to reject points above the fit.
-    max_iter : int, optional
-        The maximum number of sigma rejection iterations to perform. The default is 10.
-
-    Returns
-    -------
-    spline_fit : tuple
-        The tuple defining the best fit spline, as output by scipy.interpolate. Elements are (spline knot array, spline coefficient array, spline degree).
-    """
-    
-    # Set the knots array. Keep in mind they must be interior knots, so start at the x value minimum + break space
-    spline_knots = np.arange( x_values.min() + x_knot_spacing, x_values.max(), x_knot_spacing )
-    
-    # Set the values to fit array, will be modified in the rejection loop below
-    x_values_to_fit = x_values.copy()
-    y_values_to_fit = y_values.copy()
-
-    # Loop for the maximum number of iterations, unless an iteration sooner results in no rejections
-    for i_iter in range( max_iter ):
-
-        # Get the b spline representation of the data
-        spline_fit = interpolate.splrep( x_values_to_fit, y_values_to_fit, k = 3, t = spline_knots )
-
-        # Calculate the residuals bewteen the data values and the spline fit
-        residuals = y_values_to_fit - interpolate.splev( x_values_to_fit, spline_fit )
-
-        # Get the standard deviation of the residuals, using the MAD
-        residuals_mad = stats.median_abs_deviation( residuals, scale = 'normal' )
-
-        # Keep points within the lower/upper sigma level provided
-        within_mad = np.where( ( residuals < np.nanmedian( residuals ) + upper_sigma_reject * residuals_mad ) & ( residuals > np.nanmedian( residuals ) - lower_sigma_reject * residuals_mad ) )[0]
-
-        # If no points are rejected, break out of the loop!
-        if within_mad.size == y_values_to_fit.size:
-            break
-
-        # Re-define the x and y values to fit -- get rid of MAD rejected points
-        x_values_to_fit = x_values_to_fit[within_mad]
-        y_values_to_fit = y_values_to_fit[within_mad]
-        
-    return spline_fit
-
 
