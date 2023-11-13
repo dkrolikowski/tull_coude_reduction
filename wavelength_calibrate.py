@@ -1,7 +1,7 @@
 """ Functions to wavelength calibrate the spectra. Finds lines in arc lamp spectra (ThAr), matches them to a line list based on a preliminary input wavelength solution, and then iteratively fits a polynomial solution.
 
 Created by DMK on 11/11/2023
-Last updated by DMK on 11/11/2023
+Last updated by DMK on 11/13/2023
 """
 
 ##### Imports
@@ -21,7 +21,7 @@ import tull_coude_utils
 
 ##### Functions
 
-def order_offset_with_wave_sol_guess( prelim_wavelengths, flux, arc_ref_wavelength, arc_ref_flux, order_use_range = [ 12, 40 ], offset_test_radius = 10 ):
+def order_offset_with_wave_sol_guess( prelim_wavelengths, obs_flux, ref_wavelength, ref_flux, order_use_range = [ 12, 40 ], offset_test_radius = 10 ):
     """ Function to determine if there is an order offset between the wavelength solution guess and the observed spectrum.
     It uses a reference arc lamp spectrum to calculate residuals with the observed lamp spectrum while shifting the wavelength solution guess to determine the best fit order offset.
     It primarily works if the wavelength solution guess is already pretty good, and is used mostly for the wavelength solution guess having more orders than extracted (padding the calibration).
@@ -30,11 +30,11 @@ def order_offset_with_wave_sol_guess( prelim_wavelengths, flux, arc_ref_waveleng
     ----------
     prelim_wavelengths : array
         The preliminary wavelength solution guess, with shape (number of orders, number of pixels). There can be a different number of orders than the extracted spectrum.
-    flux : array
+    obs_flux : array
         The observed arc lamp flux spectrum, with shape (number of extracted orders, number of pixel).
-    arc_ref_wavelength : array
+    ref_wavelength : array
         The wavelength array for the arc lamp reference spectrum.
-    arc_ref_flux : array
+    ref_flux : array
         The flux array for the arc lamp reference spectrum.
     order_use_range : list of int, optional
         List of minimum and maximum orders to calculate the order offset for. The default is [ 12, 40 ].
@@ -68,10 +68,10 @@ def order_offset_with_wave_sol_guess( prelim_wavelengths, flux, arc_ref_waveleng
             test_wave = prelim_wavelengths[order+offset]
     
             # Interpolate the reference arc spectrum onto the wavelength solution guess
-            arc_ref_flux_interp = np.interp( test_wave, arc_ref_wavelength, arc_ref_flux )
+            ref_flux_interp = np.interp( test_wave, ref_wavelength, ref_flux )
     
             # Calculate the residuals between the reference and data spectrum -- normalize each by the median
-            residuals = flux[order] / np.nanmedian( flux[order] ) - arc_ref_flux_interp / np.nanmedian( arc_ref_flux_interp )
+            residuals = obs_flux[order] / np.nanmedian( obs_flux[order] ) - ref_flux_interp / np.nanmedian( ref_flux_interp )
                 
             # Calculate and output the summed absolute residuals
             sum_abs_residuals[i_offset] = np.nansum( np.abs( residuals ) )
@@ -85,7 +85,7 @@ def order_offset_with_wave_sol_guess( prelim_wavelengths, flux, arc_ref_waveleng
     
     return order_offset
 
-def get_flux_mad_from_spectral_chunks( flux, chunk_size = 50 ):
+def get_flux_mad_from_spectral_chunks( obs_flux, chunk_size = 50 ):
     """ Function to get a noise estimate for the arc lamp spectrum by looking at the MAD of chunks of the spectrum.
     Designed to reduce the influence of bleeding over of saturated Ar lines (and oxide bands to a lesser extent)
 
@@ -103,7 +103,7 @@ def get_flux_mad_from_spectral_chunks( flux, chunk_size = 50 ):
     """
     
     # The number of chunks from the input chunk size in pixels
-    number_of_chunks = flux.size // chunk_size
+    number_of_chunks = obs_flux.size // chunk_size
     
     # The array to hold the MAD for each of the spectral chunks
     mad_arr = np.full( number_of_chunks, np.nan )
@@ -115,7 +115,7 @@ def get_flux_mad_from_spectral_chunks( flux, chunk_size = 50 ):
         ind_low, ind_high = chunk_size * i, chunk_size * ( i + 1 )
     
         # Calculate the scaled MAD
-        mad_arr[i] = stats.median_abs_deviation( flux[ind_low:ind_high], nan_policy = 'omit', scale = 'normal' )
+        mad_arr[i] = stats.median_abs_deviation( obs_flux[ind_low:ind_high], nan_policy = 'omit', scale = 'normal' )
     
     # Adopt the median of the chunk MAD array
     median_chunk_mad = np.nanmedian( mad_arr )
@@ -123,7 +123,7 @@ def get_flux_mad_from_spectral_chunks( flux, chunk_size = 50 ):
     return median_chunk_mad
 
 def find_arc_lamp_line_pixel_centers( flux, config ):
-    """ Function to find lines in an input arc lamp spectrum using scipy.signal's find_peaks algorithm, with options set in the config file.
+    """ Function to find lines in an input lamp spectrum using scipy.signal's find_peaks algorithm, with options set in the config file.
 
     Parameters
     ----------
@@ -301,11 +301,11 @@ def interpolate_wavelength_solution( jd_to_interpolate, jd_reference, wavelength
 
 ### Plotting functions
 
-def plot_spectra_zoom_windows( wavelength, flux, arc_ref_wavelength, arc_ref_flux, lines_used_wavelength, file_name, window_size = 10, number_of_subplots = 6 ):
+def plot_spectra_zoom_windows( obs_wavelength, obs_flux, ref_wavelength, ref_flux, lines_used_wavelength, file_name, window_size = 10, number_of_subplots = 6 ):
         
-    number_of_pages = int( np.ceil( np.ceil( np.ptp( wavelength ) / window_size ) / number_of_subplots ) )
+    number_of_pages = int( np.ceil( np.ceil( np.ptp( obs_wavelength ) / window_size ) / number_of_subplots ) )
     
-    subplot_wave_start = wavelength.min()
+    subplot_wave_start = obs_wavelength.min()
     
     with PdfPages( file_name ) as pdf:
         
@@ -315,19 +315,19 @@ def plot_spectra_zoom_windows( wavelength, flux, arc_ref_wavelength, arc_ref_flu
             
             i_subplot = 1
             
-            while subplot_wave_start <= wavelength.max() and i_subplot <= number_of_subplots:
+            while subplot_wave_start <= obs_wavelength.max() and i_subplot <= number_of_subplots:
                 
                 subplot_wave_end = subplot_wave_start + 12.0
                 
-                data_plot_loc = np.where( ( wavelength >= subplot_wave_start ) & ( wavelength <= subplot_wave_end ) )[0]
-                ref_plot_loc  = np.where( ( arc_ref_wavelength >= subplot_wave_start ) & ( arc_ref_wavelength <= subplot_wave_end ) )[0]
+                obs_plot_loc  = np.where( ( obs_wavelength >= subplot_wave_start ) & ( obs_wavelength <= subplot_wave_end ) )[0]
+                ref_plot_loc  = np.where( ( ref_wavelength >= subplot_wave_start ) & ( ref_wavelength <= subplot_wave_end ) )[0]
                 line_plot_loc = np.where( ( lines_used_wavelength >= subplot_wave_start ) & ( lines_used_wavelength <= subplot_wave_end ) )[0]
                 
                 fig.add_subplot( 230 + i_subplot )
                 
-                plt.plot( wavelength[data_plot_loc], ( flux / np.nanmedian( flux ) )[data_plot_loc], '#323232', lw = 1.25 )
+                plt.plot( obs_wavelength[obs_plot_loc], ( obs_flux / np.nanmedian( obs_flux ) )[obs_plot_loc], '#323232', lw = 1.25 )
                 
-                plt.plot( arc_ref_wavelength[ref_plot_loc], ( arc_ref_flux / np.nanmedian( arc_ref_flux ) )[ref_plot_loc] * 5, '#bf3465', lw = 1 )
+                plt.plot( ref_wavelength[ref_plot_loc], ( ref_flux / np.nanmedian( ref_flux ) )[ref_plot_loc] * 5, '#bf3465', lw = 1 )
     
                 for line_wavelength in lines_used_wavelength[line_plot_loc]:
                     plt.axvline( x = line_wavelength, c = '#1c6ccc', lw = 0.75, ls = '--' )
@@ -343,7 +343,7 @@ def plot_spectra_zoom_windows( wavelength, flux, arc_ref_wavelength, arc_ref_flu
                 
     return None
 
-def plot_wavelength_fit_iteration_spectra( fit_record, flux, arc_ref_wavelength, arc_ref_flux, file_name ):
+def plot_wavelength_fit_iteration_spectra( fit_record, obs_flux, ref_wavelength, ref_flux, file_name ):
     
     ### Wrap everything in one multi-page PDF -- one page for each iteration
     with PdfPages( file_name ) as pdf:
@@ -352,17 +352,17 @@ def plot_wavelength_fit_iteration_spectra( fit_record, flux, arc_ref_wavelength,
         for i_iter in reversed( range( len( fit_record['pixel'] ) ) ):
             
             # Make the wavelength solution for this iteration
-            wavelength_solution = np.polyval( fit_record['poly_coeffs'][i_iter], np.arange( flux.size ) )
+            wavelength_solution = np.polyval( fit_record['poly_coeffs'][i_iter], np.arange( obs_flux.size ) )
             
             # Make the figure
             plt.figure( figsize = ( 12, 6 ) )
             
             # Plot the spectra! Normalize by the median
-            plt.plot( wavelength_solution, flux / np.nanmedian( flux ), '#323232', lw = 1.25, label = 'Data Flux' )
+            plt.plot( wavelength_solution, obs_flux / np.nanmedian( obs_flux ), '#323232', lw = 1.25, label = 'Data Flux' )
             
             # Plot the reference ThAr spectrum. Normalize by the median and then x10 so it is offset from the data flux
-            ref_plot_loc = np.where( ( arc_ref_wavelength >= wavelength_solution.min() - 5 ) & ( arc_ref_wavelength <= wavelength_solution.max() + 5 ) )[0]
-            plt.plot( arc_ref_wavelength[ref_plot_loc], arc_ref_flux[ref_plot_loc] / np.nanmedian( arc_ref_flux[ref_plot_loc] ) * 10, '#bf3465', lw = 1.0, label = 'Reference Arc Spectrum' )
+            ref_plot_loc = np.where( ( ref_wavelength >= wavelength_solution.min() - 5 ) & ( ref_wavelength <= wavelength_solution.max() + 5 ) )[0]
+            plt.plot( ref_wavelength[ref_plot_loc], ref_flux[ref_plot_loc] / np.nanmedian( ref_flux[ref_plot_loc] ) * 10, '#bf3465', lw = 1.0, label = 'Reference Arc Spectrum' )
             
             # Plot the lines
             for line_wavelength in fit_record['wavelength'][i_iter]:
@@ -448,9 +448,7 @@ def wavelength_solution( arc_file_indices, header_df, config ):
         # Make the sub-directories for each of the types of plots
         for plot_dir_name in [ 'fit_residuals', 'fit_iter_spectra', 'adopted_sol_spectra_zoom' ]:
             os.makedirs( os.path.join( frame_dir_path, plot_dir_name ), exist_ok = True )
-        
-        print( 'Wavelength solving frame {}'.format( header_df['file_token'].values[i_file] ) )
-        
+                
         ### Get the order offset to be applied to the preliminary solution if config is flagged to
         if config['wavecal']['use_prelim_sol_order_offset']:
             order_offset = order_offset_with_wave_sol_guess( wavelength_solution_guess, file_in['extracted flux'].data, arc_ref_spectrum['wavelength'].values, arc_ref_spectrum['flux'].values )
@@ -458,7 +456,6 @@ def wavelength_solution( arc_file_indices, header_df, config ):
             # Don't calibrate with this file if the offset is bad! If it would be accessing an unallowed index of the wavelength solution guess (negative or larger than shape)
             if order_offset < 0 or ( order_offset + file_in[1].data.shape[0] ) > wavelength_solution_guess.shape[0]:
                 continue
-            
         else:
             order_offset = 0
         
