@@ -302,6 +302,32 @@ def interpolate_wavelength_solution( jd_to_interpolate, jd_reference, wavelength
 ### Plotting functions
 
 def plot_spectra_zoom_windows( obs_wavelength, obs_flux, ref_wavelength, ref_flux, lines_used_wavelength, file_name, window_size = 10, number_of_subplots = 6 ):
+    """ Function to plot zoom-ins of the final adopted wavelength calibrated observed spectrum compared to a reference source spectrum. Each page has multiple panels with small cut-out of the spectrum.
+    This is to highlight the quality of the wavelength solution, and see how it compares to the reference for individual lines across the spectrum.
+
+    Parameters
+    ----------
+    obs_wavelength : array
+        The final adopted wavelength solution for the observed spectrum.
+    obs_flux : array
+        The observed flux array.
+    ref_wavelength : array
+        The reference source wavelength array.
+    ref_flux : array
+        The reference source flux array.
+    lines_used_wavelength : array
+        The wavelengths of the reference lines from the line list used to calibrate the wavelength solution.
+    file_name : str
+        The plot file name to write to.
+    window_size : float, optional
+        The wavelength width of each individual spectrum window. The default is 10.
+    number_of_subplots : int, optional
+        The number of spectrum window panels on each page. The default is 6.
+
+    Returns
+    -------
+    None.
+    """
         
     number_of_pages = int( np.ceil( np.ceil( np.ptp( obs_wavelength ) / window_size ) / number_of_subplots ) )
     
@@ -344,6 +370,26 @@ def plot_spectra_zoom_windows( obs_wavelength, obs_flux, ref_wavelength, ref_flu
     return None
 
 def plot_wavelength_fit_iteration_spectra( fit_record, obs_flux, ref_wavelength, ref_flux, file_name ):
+    """ Function to plot the wavelength-calibrated observed spectra for each of the fitting iterations compared to a reference spectrum. This is to highlight the quality of the solution.
+    It is a multi-page PDF plot where each page is a separate iteration (working backwards -- the first page is the adopted iteration).
+
+    Parameters
+    ----------
+    fit_record : dict
+        A dictionary containing a record of the lines used and fit coefficients for each of the fitting iterations. This is the output from fit_wavelength_solution.
+    obs_flux : array
+        The observed flux array.
+    ref_wavelength : array
+        The reference source wavelength array.
+    ref_flux : array
+        The reference source flux array.
+    file_name : str
+        The plot file name to write to.
+
+    Returns
+    -------
+    None.
+    """
     
     ### Wrap everything in one multi-page PDF -- one page for each iteration
     with PdfPages( file_name ) as pdf:
@@ -382,7 +428,22 @@ def plot_wavelength_fit_iteration_spectra( fit_record, obs_flux, ref_wavelength,
 
     return None
 
-def plot_wavelength_fit_iteration_residuals( fit_record, file_name, vel_resid_sigma_reject ):
+def plot_wavelength_fit_iteration_residuals( fit_record, vel_resid_sigma_reject, file_name ):
+    """ Function to plot the velocity residuals for the iterative wavelength solution fitting. It is a multi-page PDF plot where each page is a separate iteration (working backwards -- the first page is the adopted iteration).
+
+    Parameters
+    ----------
+    fit_record : dict
+        A dictionary containing a record of the lines used and fit coefficients for each of the fitting iterations. This is the output from fit_wavelength_solution.
+    file_name : str
+        The plot file name to write to.
+    vel_resid_sigma_reject : float
+        The sigma-level used for rejection, to plot horizontal lines and highlight points that are rejected in each iteration.
+
+    Returns
+    -------
+    None.
+    """
     
     ### Wrap everything in one multi-page PDF -- one page for each iteration
     with PdfPages( file_name ) as pdf:
