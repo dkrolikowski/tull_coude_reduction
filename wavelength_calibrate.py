@@ -12,7 +12,7 @@ import pandas as pd
 from astropy.io import fits
 from datetime import datetime
 from matplotlib.backends.backend_pdf import PdfPages
-from scipy import optimize, signal, stats
+from scipy import optimize, signal, stats, interpolate
 
 import os
 import tqdm
@@ -261,6 +261,44 @@ def fit_wavelength_solution( pixel_centroids, prelim_wavelengths, line_list_wave
     
     return wave_poly_fit, line_centroid_record
 
+def wavelength_solution_post_process( wave_sol_coeffs ):
+    
+    # The output set of wavelength solution polynomial coefficients -- will have rejected orders replaced with the fit to the coefficient vs. order
+    output_wave_sol_coeffs = wave_sol_coeffs.copy()
+    
+    # Go through each of the polynomial coefficients
+    for i_par in range( wave_sol_coeffs.shape[1] ):
+    
+        # Sigma reject fit to the polynomial coefficient vs. order
+        fit, x_use, y_use = tull_coude_utils.polynomial_fit_sigma_reject( np.arange( wave_sol_coeffs.shape[0] ), wave_sol_coeffs[:,i_par], 4, 5, 3, return_data = True )
+        
+        # The orders that were rejected in the fits
+        reject_orders = np.setdiff1d( np.arange( wave_sol_coeffs.shape[0] ), x_use )
+        
+        # Replace those coeffs with the fit values
+        output_wave_sol_coeffs[reject_orders,i_par] = np.polyval( fit, reject_orders )
+
+    return output_wave_sol_coeffs
+
+def interpolate_wavelength_solution( jd_to_interpolate, jd_reference, wavelength_solution_reference ):
+    
+    # First check if the observation is bounded by reference spectra -- if not just adopt the closest wavelength solution and return a flag
+    if jd_reference.min() > jd_to_interpolate or jd_reference.max() < jd_to_interpolate:
+        
+        wavelength_solution_interpolate = wavelength_solution_reference[np.argmin( np.abs( jd_to_interpolate - jd_reference ) )]
+        
+        wavelength_solution_flag = 'CLOSEST'
+    
+    # If it is bounded by arcs -- linear interpolation
+    else:
+        interp_fn = interpolate.interp1d( jd_reference, wavelength_solution_reference, axis = 0, kind = 'linear' )
+        
+        wavelength_solution_interpolate = interp_fn( jd_to_interpolate )
+        
+        wavelength_solution_flag = 'LINTERP'
+
+    return wavelength_solution_interpolate, wavelength_solution_flag
+
 ### Plotting functions
 
 def plot_spectra_zoom_windows( wavelength, flux, arc_ref_wavelength, arc_ref_flux, lines_used_wavelength, file_name, window_size = 10, number_of_subplots = 6 ):
@@ -384,7 +422,7 @@ def plot_wavelength_fit_iteration_residuals( fit_record, file_name, vel_resid_si
 
 ##### Main wrapper script for wavelength calibration
 
-def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
+def wavelength_solution( arc_file_indices, header_df, config ):
     
     ##### First make the wavelength solution!
     
@@ -400,7 +438,7 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
     arc_ref_spectrum = pd.read_csv( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['arc_ref_file'] ) )
     
     ### Go through each of the input file indices for the arc lamps to use
-    for i_file in tqdm.tqdm( arc_file_indices ):
+    for i_file in arc_file_indices:
         
         file_in = fits.open( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ) )
         
@@ -423,7 +461,6 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
             
         else:
             order_offset = 0
-                    
         
         all_orders_wave_sol_poly_coeffs = np.full( ( config['trace']['number_of_orders'], config['wavecal']['wave_cal_poly_order'] + 1 ), np.nan )
         all_orders_wave_sol = np.full( file_in[1].data.shape, np.nan )
@@ -452,11 +489,10 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
             plot_file_name = os.path.join( frame_dir_path, 'fit_iter_spectra', 'fit_iter_spectra_order_{}.pdf'.format( order ) )
             plot_wavelength_fit_iteration_spectra( wavelength_solution_fit_record, file_in[1].data[order], arc_ref_spectrum['wavelength'].values, arc_ref_spectrum['flux'].values, plot_file_name )
             
+            # Plot order spectrum with zoom-in windows to highlight the solution
             plot_file_name = os.path.join( frame_dir_path, 'adopted_sol_spectra_zoom', 'spectra_zoom_order_{}.pdf'.format( order ) )
             plot_spectra_zoom_windows( all_orders_wave_sol[order], file_in[1].data[order], arc_ref_spectrum['wavelength'].values, arc_ref_spectrum['flux'].values, wavelength_solution_fit_record['wavelength'][-1], plot_file_name )
-                        
-        np.save( os.path.join( frame_dir_path, 'poly_coeffs.npy' ), all_orders_wave_sol_poly_coeffs )
-        
+    
         ### Output this frame's wavelength solution!
         
         # Re-build the output file rather than append to the input, in case of multiple runs
@@ -470,10 +506,55 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
 
         # Write out the file with the wavelength solution -- overwrite the previous file
         output_file.writeto( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ), overwrite = True )
-        
+            
     return None
 
+def wavelength_calibrate( obj_file_indices, arc_file_indices, header_df, config ):
+    
+    ### Read in the arc wavelength solutions to use for interpolation
+    
+    arc_wavelength_solutions = []
+    
+    for i_file in arc_file_indices:
+        
+        file_name = os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) )
+        
+        file_in = fits.getdata( file_name, extname = 'wavelength' )
+        
+        arc_wavelength_solutions.append( file_in )
+        
+        file_in.close()
+        
+    arc_wavelength_solutions = np.array( arc_wavelength_solutions )
+        
+    ### Go through each of the input file indices for the arc lamps to use
+    for i_file in tqdm.tqdm( obj_file_indices ):
+        
+        # Interpolate the wavelength solution
+        obj_wavelength_solution, obj_wavelength_solution_flag = interpolate_wavelength_solution( header_df['obs_jd'].values[i_file], header_df['obs_jd'].values[arc_file_indices], arc_wavelength_solutions )
+        
+        ### Output the wavelength calibrated file
+        
+        # Read in the spectrum file to append wavelength solution to
+        file_name = os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) )
+        file_in   = fits.open( file_name )
+        
+        # Build the output file
+        output_file = fits.HDUList( [ file_in[0], file_in['extracted flux'], file_in['extracted flux error'], fits.ImageHDU( obj_wavelength_solution, name = 'wavelength' ) ] )
+                
+        # Add a header keyword to the primary HDU for the polynomial degree of the wavelength solution
+        output_file[0].header['WAVPOLYD'] = ( config['wavecal']['wave_cal_poly_order'], 'Polynomial degree of wavelength solution' )
+        
+        # Add a header keyword for the wavelength solution interpolation: whether it is linearly interpolated or the closest reference wavelength solution was adopted
+        output_file[0].header['WAVTYPE']  = ( obj_wavelength_solution_flag, 'Wavelength solution type, interpolation or closest adoption')
+        
+        # Add a history entry to the primary HDU to mark that it is wavelength calibrated
+        output_file[0].header['HISTORY'] = 'Spectrum wavelength calibrated on {}'.format( datetime.strftime( datetime.now(), '%Y/%m/%d' ) )
 
+        # Write out the file with the wavelength solution -- overwrite the previous file
+        output_file.writeto( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ), overwrite = True )
+
+    return None
 
 
 
