@@ -10,12 +10,11 @@ import numpy as np
 import pandas as pd
 
 from astropy.io import fits
+from datetime import datetime
 from matplotlib.backends.backend_pdf import PdfPages
 from scipy import optimize, signal, stats
 
-import glob
 import os
-import pickle
 import tqdm
 
 import tull_coude_utils
@@ -280,7 +279,7 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
     arc_ref_spectrum = pd.read_csv( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['arc_ref_file'] ) )
     
     ### Go through each of the input file indices for the arc lamps to use
-    for i_file in arc_file_indices:
+    for i_file in tqdm.tqdm( arc_file_indices ):
         
         file_in = fits.open( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ) )
         
@@ -293,6 +292,9 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
         
         print( 'Wavelength solving frame {}'.format( header_df['file_token'].values[i_file] ) )
         
+        all_orders_wave_sol_poly_coeffs = np.full( ( config['trace']['number_of_orders'], config['wavecal']['wave_cal_poly_order'] + 1 ), np.nan )
+        all_orders_wave_sol = np.full( file_in[1].data.shape, np.nan )
+        
         # Go order by order and get wavelength solution
         for order in range( config['trace']['number_of_orders'] ):
             
@@ -304,6 +306,9 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
             # Fit the wavelength solution
             wavelength_solution_poly_coeffs, wavelength_solution_fit_record = fit_wavelength_solution( lamp_line_pixel_centroids, wavelength_solution_guess[order], lamp_line_list, config )
             
+            all_orders_wave_sol_poly_coeffs[order] = wavelength_solution_poly_coeffs
+            all_orders_wave_sol[order] = np.polyval( wavelength_solution_poly_coeffs, np.arange( all_orders_wave_sol.shape[1] ) )
+                        
             ### Make any plots!
 
             # The fit velocity residuals
@@ -313,7 +318,19 @@ def wavelength_solution_and_calibrate( arc_file_indices, header_df, config ):
             # The spectra for each of the fits
             plot_file_name = os.path.join( frame_dir_path, 'fit_iter_spectra', 'fit_iter_spectra_order_{}.pdf'.format( order ) )
             plot_wavelength_fit_iteration_spectra( wavelength_solution_fit_record, file_in[1].data[order], arc_ref_spectrum['wavelength'].values, arc_ref_spectrum['flux'].values, plot_file_name )
+            
+        ### Output this frame's wavelength solution!
+        
+        # Append a new extension to the file
+        file_in.append( fits.ImageHDU( all_orders_wave_sol, name = 'wavelength' ) )
+        
+        # Add a header keyword to the primary HDU for the polynomial degree of the wavelength solution
+        file_in[0].header['WAVPOLYD'] = ( config['wavecal']['wave_cal_poly_order'], 'Polynomial degree of wavelength solution' )
+        
+        # Add a history entry to the primary HDU to mark that it is wavelength calibrated
+        file_in[0].header['HISTORY'] = 'Spectrum wavelength calibrated on {}'.format( datetime.strftime( datetime.now(), '%Y/%m/%d' ) )
 
-    ### Then apply the wavelength solution to all of the extracted spectra
-    
+        # Write out the file with the wavelength solution -- overwrite the previous file
+        file_in.writeto( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ), overwrite = True )
+        
     return None
