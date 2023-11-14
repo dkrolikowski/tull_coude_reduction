@@ -354,7 +354,10 @@ def plot_spectra_zoom_windows( obs_wavelength, obs_flux, ref_wavelength, ref_flu
         
         for i_page in range( number_of_pages ):
             
-            fig = plt.figure( figsize = ( 12, 8 ) )
+            # fig = plt.figure( figsize = ( 12, 8 ), num = 1, clear = True )
+            fig = plt.figure( num = 1, clear = True )
+            
+            fig.set_size_inches( 12, 8 )
             
             i_subplot = 1
             
@@ -382,8 +385,9 @@ def plot_spectra_zoom_windows( obs_wavelength, obs_flux, ref_wavelength, ref_flu
                 i_subplot += 1
                 
             pdf.savefig( bbox_inches = 'tight', pad_inches = 0.05 )
-            plt.close()
-                
+            # fig.clear()
+            # plt.close( fig )
+                            
     return None
 
 def plot_wavelength_fit_iteration_spectra( fit_record, obs_flux, ref_wavelength, ref_flux, file_name ):
@@ -418,7 +422,8 @@ def plot_wavelength_fit_iteration_spectra( fit_record, obs_flux, ref_wavelength,
             wavelength_solution = np.polyval( fit_record['poly_coeffs'][i_iter], np.arange( obs_flux.size ) )
             
             # Make the figure
-            plt.figure( figsize = ( 12, 6 ) )
+            fig = plt.figure( num = 1, clear = True )
+            fig.set_size_inches( 12, 6 )
             
             # Plot the spectra! Normalize by the median
             plt.plot( wavelength_solution, obs_flux / np.nanmedian( obs_flux ), '#323232', lw = 1.25, label = 'Data Flux' )
@@ -441,7 +446,10 @@ def plot_wavelength_fit_iteration_spectra( fit_record, obs_flux, ref_wavelength,
             plt.gca().set_yscale( 'log' )
             
             pdf.savefig( bbox_inches = 'tight', pad_inches = 0.05 )
-            plt.close()
+            # plt.gcf().clear()
+            # plt.close( plt.gcf() )
+            
+    plt.cla()
 
     return None
 
@@ -469,7 +477,8 @@ def plot_wavelength_fit_iteration_residuals( fit_record, vel_resid_sigma_reject,
         for i_iter in reversed( range( len( fit_record['pixel'] ) ) ):
             
             # Make the figure
-            plt.figure( figsize = ( 12, 6 ) )
+            fig = plt.figure( num = 1, clear = True )
+            fig.set_size_inches( 12, 6 )
             
             # Plot the velocity residuals
             plt.plot( fit_record['wavelength'][i_iter], fit_record['vel_resid'][i_iter], 'o', c = '#dfa5e5', mec = '#323232', mew = 0.5 )
@@ -494,8 +503,9 @@ def plot_wavelength_fit_iteration_residuals( fit_record, vel_resid_sigma_reject,
             plt.title( 'Lines Used: {}, Lines Rejected: {}, Residuals Sigma: {:.2f} km/s, Cut-off Sigma: {}'.format( fit_record['wavelength'][i_iter].size, lines_rejected.size, velocity_residual_mad, vel_resid_sigma_reject ) )
             
             pdf.savefig( bbox_inches = 'tight', pad_inches = 0.05 )
-            plt.close()
-            
+            # plt.gcf().clear()
+            # plt.close( plt.gcf() )
+                        
     return None
 
 ##### Main wrapper script for wavelength calibration
