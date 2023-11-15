@@ -440,16 +440,16 @@ def get_trace( flat_field, config ):
     flat_field_slice = flat_field['flat flux'].data[:,config['trace']['order_start_index']]
     
     # Get the order centers
-    order_start_centers = find_order_centers_along_slice( flat_field_slice, config['instrument']['order_xdisp_width'], trace_dir, config['trace']['order_center_method'] )
+    order_start_centers = find_order_centers_along_slice( flat_field_slice, config['trace']['order_xdisp_trace_width'], trace_dir, config['trace']['order_center_method'] )
             
     # Get rid of the first order if it isn't fully on the detector with a bit of space on top (2/3 of the config defined cross dispersion order width)
-    if order_start_centers[0] < config['instrument']['order_xdisp_width'] * 2 / 3:
+    if order_start_centers[0] < config['trace']['order_xdisp_trace_width'] * 2 / 3:
         order_start_centers = order_start_centers[1:]
     
     ### Get the full trace across the full echellogram and fit each order with polynomials
     
     # Get the full trace using the flat field and the starting order centers
-    full_trace = find_full_trace( flat_field['flat flux'].data, order_start_centers, config['trace']['order_start_index'], config['instrument']['order_xdisp_width'], trace_dir )
+    full_trace = find_full_trace( flat_field['flat flux'].data, order_start_centers, config['trace']['order_start_index'], config['trace']['order_xdisp_trace_width'], trace_dir )
     
     # Fit the trace: the returned fit trace is from the evaluated polynomial fits to each order's trace. 
     # This also returns a list of orders with poor or missing order trace fits, so their trace is defined using fits to other orders' polynomial coefficients
