@@ -536,7 +536,8 @@ def wavelength_solution( file_indices, header_df, config ):
     wavelength_solution_guess = np.load( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['wave_sol_guess'] ) )
     
     # The arc lamp line list
-    lamp_line_list = np.load( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['line_list'] ) )
+    lamp_line_list_file = pd.read_csv( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['line_list'] ) )
+    lamp_line_list = lamp_line_list_file['wavelength'].values
     
     # Read in the wavelength vs flux CSV of the ThAr photron reference spectrum
     arc_ref_spectrum = pd.read_csv( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['arc_ref_file'] ) )
