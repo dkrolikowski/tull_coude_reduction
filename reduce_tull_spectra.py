@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+##### Imports #####
+
+import argparse
+import os
+import yaml
+
 import numpy as np
 
 from astropy.io import fits
@@ -12,123 +18,155 @@ import wavelength_solve_and_calibrate
 import continuum_fit
 
 import tull_coude_utils
-import yaml
-import os
 
-##### Read in the config file defining this reduction run
+##### Set up for running the reduction pipeline! #####
 
-config_file = yaml.safe_load( open( 'test_config.yml', 'r' ) )
+### Read in the command line argument for the config file that defines the reduction run
+
+parser = argparse.ArgumentParser( description = 'Tull coude reduction script' )
+parser.add_argument( 'config_file', type = str, help = 'Configuration file with settings for the Tull coude reduction steps' )
+args = parser.parse_args()
+
+# Read in the YAML config file for this reduction run
+config_file = yaml.safe_load( open( args.config_file, 'r' ) )
 
 print( 'PIPELINE START: Running reduction pipeline for night at data path: {}'.format( config_file['paths']['working_dir'] ) )
 
-##### Set up directories for pipeline output
+### Set up the reduction directories for holding the pipeline output
 
 # cd into the working directory
 os.chdir( config_file['paths']['working_dir'] )
 
-# Make the directory tree (will move this to be defined by the config file in the future)
-directories = [ 'cals', 'trace', 'object_files', 'spectrum_files', 'wavecal' ]
-for dir_name in directories:
+# Make the directory tree required within the working directory
+for dir_name in config_file['paths']['sub_dir_list']:
     os.makedirs( os.path.join( config_file['paths']['reduction_dir'], dir_name ), exist_ok = True )
 
-##### Pull header information from files and output
+### Read in the FITS files and pull header information
 
-header_info = tull_coude_utils.make_header_manifest( config_file['paths']['header_manifest_file_name'] )
+# Write the header information to a CSV file
+header_info = tull_coude_utils.make_header_manifest( config_file['paths']['header_info_file_name'] )
 
-lower_case_object_names = np.array( [ object_name.lower() for object_name in header_info['object'].values ] )
+# Also generate a list of the object names from the file headers in lower case, for ease of searching through them later
+object_names_lowercase = np.array( [ object_name.lower() for object_name in header_info['object'].values ] )
 
-# Build CCD calibrations!
+##### Now run the reduction pipeline modules! #####
 
-# Get the file indices for the bias and flat frames. Done in the main script rather than function in case this requires some changes to the file sorting.
-bias_frame_indices = np.where( header_info['image_type'].values == 'zero' )[0]
-flat_frame_indices = np.where( ( header_info['image_type'].values == 'flat' ) & ( header_info['object'].values != 'FF integration time test' ) )[0]
+### Build CCD calibration files -- bias, flat, and bad pixel mask
 
+# Get the file indices for the bias frames in the header info file, with the image type string defined in the config file (Tull coude: 'zero')
+bias_frame_indices = np.where( header_info['image_type'].values == config_file['calibrations']['bias_image_type'] )[0]
+
+# Get the file indices fro the flat frames in the header info file
+# The config file defines: 1) the image type string for flats (Tull coude: 'flat') and 2) any object names to discard
+flat_frame_indices = np.where( ( header_info['image_type'].values == config_file['calibrations']['flat_image_type'] ) & 
+                               ( [ object_name not in config_file['calibrations']['flat_object_names_to_discard'] for object_name in header_info['object'].values ] ) )[0]
+
+# Run the CCD calibration file making step if config file says to do so
 if config_file['calibrations']['do_step']:
-    print( 'MODULE: Making CCD calibration files.' )
-    
+    print( 'MODULE START: Making CCD calibration files.' )
+
+    # Run CCD calibration file making module
     ccd_calibrations.build_calibrations( header_info, bias_frame_indices, flat_frame_indices, config_file )
-
-# Generate the image files, after bias and flat processing
-
-# Get the file indices for the object frames to process -- ThAr reference and science frames
-
-thar_names = [ 'thar', 'a' ] # Lower case!
-
-thar_frame_indices = np.where( np.logical_and( ( header_info['image_type'].values == 'comp' ), np.any( [ lower_case_object_names == name for name in thar_names ], axis = 0 ) ) )[0]
-
-not_object_names = [ 'test' ]
-
-object_frame_indices = np.where( np.logical_and( header_info['image_type'].values == 'object', np.all( [ lower_case_object_names != name for name in not_object_names ], axis = 0 ) ) )[0]
-
-frames_to_extract = np.sort( np.concatenate( [ thar_frame_indices, object_frame_indices ] ) )
-
-# If the config file indicates to generate the processed object images
-if config_file['image_process']['do_step']:
-    print( 'MODULE: Image processing.' )
     
-    # Read in the CCD calibration files necessary for image processing if we are going to image process!
+### Now process and generate the 2D echellogram images for the files to be reduced, using the CCD calibration files
+
+# Process and produce images if config file says to do so
+if config_file['image_process']['do_step']:
+    print( 'MODULE START: Image processing.' )
+
+    # Get the file indices for the arc lamp frames to process, to exclude any testing/focusing frames
+    arc_frame_indices = np.where( np.logical_and( header_info['image_type'].values == config_file['image_process']['arc_lamp_image_type'], np.any( [ object_names_lowercase == name for name in config_file['image_process']['valid_arc_lamp_object_names'] ], axis = 0 ) ) )[0]
+    
+    # Get the file indices for the science target frames to process, ecluding any test frames
+    object_frame_indices = np.where( np.logical_and( header_info['image_type'].values == 'object', np.all( [ object_names_lowercase != name for name in config_file['image_process']['invalid_science_object_names'] ], axis = 0 ) ) )[0]
+
+    # Concatenate the two together!
+    frame_indices_to_process = np.sort( np.concatenate( [ arc_frame_indices, object_frame_indices ] ) )
+    
+    # Read in the CCD calibration files necessary for image processing
     super_bias     = fits.open( os.path.join( config_file['paths']['reduction_dir'], 'cals', 'super_bias.fits' ) )
     flat_field     = fits.open( os.path.join( config_file['paths']['reduction_dir'], 'cals', 'flat_field.fits' ) )
     bad_pixel_mask = fits.open( os.path.join( config_file['paths']['reduction_dir'], 'cals', 'bad_pixel_mask.fits' ) )
     
-    image_processing.build_images( frames_to_extract, super_bias, flat_field, bad_pixel_mask, header_info, config_file )
-
-#### Trace
-
-# If the config file indicates to make the trace
-if config_file['trace']['do_step']:
-    print( 'MODULE: Tracing echelle orders.' )
+    # Run image processing module
+    image_processing.build_images( frame_indices_to_process, super_bias, flat_field, bad_pixel_mask, header_info, config_file )
     
-    # Read in the flat field for getting the trace if we need to
+### Now get the trace for the echelle orders
+
+# Find and fit the echellogram traces if the config file says to
+if config_file['trace']['do_step']:
+    print( 'MODULE START: Tracing echelle orders.' )
+    
+    # Read in the flat field
     flat_field = fits.open( os.path.join( config_file['paths']['reduction_dir'], 'cals', 'flat_field.fits' ) )
     
+    # Run trace finding module
     trace_echelle.get_trace( flat_field, config_file )
 
-#### Extract!
+### Extract 1D spectra from the processed 2D images
 
+# If the config file says to
 if config_file['extraction']['do_step']:
-    print( 'MODULE: Extracting 1D spectra.' )
+    print( 'MODULE START: Extracting 1D spectra.' )
     
+    # Read in the trace file
     trace_file = fits.open( os.path.join( config_file['paths']['reduction_dir'], 'trace', 'trace.fits' ) )
         
+    ## Extract the arc lamp spectra -- separate from the science object spectra because no optimal extraction
+    
+    # The file indices for the arc lamp frames to extract
+    arc_frame_indices = np.where( np.logical_and( header_info['image_type'].values == config_file['image_process']['arc_lamp_image_type'], np.any( [ object_names_lowercase == name for name in config_file['image_process']['valid_arc_lamp_object_names'] ], axis = 0 ) ) )[0]
+
+    # Run the extraction for arc lamp frames
+    extract_spectrum.extract_spectrum( arc_frame_indices, trace_file[2].data, header_info, config_file['extraction']['lamp_extract_type'], config_file['extraction']['lamp_background_subtract'], config_file )
+    
+    ## Extract the science spectra
+    
+    # Leave this here for now -- want to add regex for excluding solar port data
     not_object_names = [ 'test', 'solar', 'sol port', 'solar port', 'solport', 'solarport', 'solar port halpha' ]
 
-    object_frame_indices_to_extract = np.where( np.logical_and( header_info['image_type'].values == 'object', np.all( [ lower_case_object_names != name for name in not_object_names ], axis = 0 ) ) )[0]
-    
-    extract_spectrum.extract_spectrum( object_frame_indices_to_extract, trace_file[2].data, header_info, config_file['extraction']['science_extract_type'], config_file['extraction']['science_background_subtract'], config_file )
+    object_frame_indices = np.where( np.logical_and( header_info['image_type'].values == 'object', np.all( [ object_names_lowercase != name for name in not_object_names ], axis = 0 ) ) )[0]
 
-    thar_names = [ 'thar', 'a' ] # Lower case!
+    # Run the extraction module for the science frames    
+    extract_spectrum.extract_spectrum( object_frame_indices, trace_file[2].data, header_info, config_file['extraction']['science_extract_type'], config_file['extraction']['science_background_subtract'], config_file )
     
-    thar_frame_indices_to_extract = np.where( np.logical_and( ( header_info['image_type'].values == 'comp' ), np.any( [ lower_case_object_names == name for name in thar_names ], axis = 0 ) ) )[0]
-
-    extract_spectrum.extract_spectrum( thar_frame_indices_to_extract, trace_file[2].data, header_info, config_file['extraction']['lamp_extract_type'], config_file['extraction']['lamp_background_subtract'], config_file )
-    
-### Wave cal!
+### Make the wavelength solution and calibrate the spectra
 
 if config_file['wavecal']['do_step']:
-    print( 'MODULE: Wavelength calibration.' )
+    print( 'MODULE START: Wavelength calibration.' )
     
-    thar_names = [ 'thar', 'a' ] # Lower case!
+    ## Get the file indices of the arc lamp frames to use for wavelength solution -- which allows for a minimum exposure time set in the config file
     
-    thar_frame_indices_to_wavesol = np.where( np.logical_and( ( header_info['image_type'].values == 'comp' ), np.any( [ lower_case_object_names == name for name in thar_names ], axis = 0 ) ) )[0]
-    thar_frame_indices_to_wavesol = np.intersect1d( thar_frame_indices_to_wavesol, np.where( header_info['exp_time'].values >= config_file['wavecal']['min_arc_exp_time'] )[0] )
+    # First the indices where the type and object names are for arc lamps
+    arc_frame_indices = np.where( np.logical_and( header_info['image_type'].values == config_file['image_process']['arc_lamp_image_type'], np.any( [ object_names_lowercase == name for name in config_file['image_process']['valid_arc_lamp_object_names'] ], axis = 0 ) ) )[0]
     
-    wavelength_solve_and_calibrate.wavelength_solution( thar_frame_indices_to_wavesol, header_info, config_file )
+    # And now apply the minimum exposure time criterion
+    arc_frame_indices = np.intersect1d( arc_frame_indices, np.where( header_info['exp_time'].values >= config_file['wavecal']['min_arc_exp_time'] )[0] )
+    
+    # Run the wavelength solution module
+    wavelength_solve_and_calibrate.wavelength_solution( arc_frame_indices, header_info, config_file )
 
-    frame_indices_to_wavecal = [ i for i in range( header_info.shape[0] ) if os.path.exists( os.path.join( config_file['paths']['reduction_dir'], 'spectrum_files/tullcoude_{}_spectrum.fits'.format( header_info['file_token'].values[i] ) ) ) ]
-    frame_indices_to_wavecal = np.setdiff1d( frame_indices_to_wavecal, thar_frame_indices_to_wavesol )
-        
-    wavelength_solve_and_calibrate.wavelength_calibrate( frame_indices_to_wavecal, thar_frame_indices_to_wavesol, header_info, config_file )
+    ## Get the file indices for the science spectra to wavelength calibrate and calibrate them
     
-### Continuum fit
+    # Just take all of the files that have extracted spectra files other than the arc lamp frames used for the wavelength solution
+    frame_indices_to_wavecal = [ i for i in range( header_info.shape[0] ) if os.path.exists( os.path.join( config_file['paths']['reduction_dir'], 'spectrum_files/tullcoude_{}_spectrum.fits'.format( header_info['file_token'].values[i] ) ) ) ]
+    frame_indices_to_wavecal = np.setdiff1d( frame_indices_to_wavecal, arc_frame_indices )
+    
+    # Run the wavelength calibration moduel
+    wavelength_solve_and_calibrate.wavelength_calibrate( frame_indices_to_wavecal, arc_frame_indices, header_info, config_file )
+    
+### Continuum fit the extracted science spectra
 
 if config_file['continuum_fit']['do_step']:
-    print( 'MODULE: Fitting continuum' )
+    print( 'MODULE START: Fitting continuum' )
     
+    # The file indices of the science frames to continuum fit
     not_object_names = [ 'test', 'solar', 'sol port', 'solar port', 'solport', 'solarport', 'solar port halpha' ]
-    object_frame_indices_to_extract = np.where( np.logical_and( header_info['image_type'].values == 'object', np.all( [ lower_case_object_names != name for name in not_object_names ], axis = 0 ) ) )[0]
+
+    object_frame_indices = np.where( np.logical_and( header_info['image_type'].values == 'object', np.all( [ object_names_lowercase != name for name in not_object_names ], axis = 0 ) ) )[0]
     
-    continuum_fit.fit_spectra_continuum( object_frame_indices_to_extract, header_info, config_file )
+    # Run the spline continuum fitting module
+    continuum_fit.fit_spectra_continuum( object_frame_indices, header_info, config_file )
         
 print( 'Everything is done.' )
     
