@@ -153,7 +153,7 @@ if config_file['wavecal']['do_step']:
     frame_indices_to_wavecal = [ i for i in range( header_info.shape[0] ) if os.path.exists( os.path.join( config_file['paths']['reduction_dir'], 'spectrum_files/tullcoude_{}_spectrum.fits'.format( header_info['file_token'].values[i] ) ) ) ]
     frame_indices_to_wavecal = np.setdiff1d( frame_indices_to_wavecal, arc_frame_indices )
     
-    # Run the wavelength calibration moduel
+    # Run the wavelength calibration module
     wavelength_solve_and_calibrate.wavelength_calibrate( frame_indices_to_wavecal, arc_frame_indices, header_info, config_file )
     
 ### Continuum fit the extracted science spectra
@@ -177,7 +177,12 @@ if config_file['radial_velocity']['do_step']:
 
     object_frame_indices = np.where( np.logical_and( header_info['image_type'].values == 'object', np.all( [ object_names_lowercase != name for name in not_object_names ], axis = 0 ) ) )[0]
 
-    radial_velocity.measure_radial_velocity( [object_frame_indices[0]], header_info, config_file )
+    # Run the BF computation and RV measurement module
+    # radial_velocity.measure_radial_velocity( object_frame_indices, header_info, config_file )
+    
+    # Run function to generate the night's compiled RV information csv
+    csv_file_name = os.path.join( config_file['paths']['reduction_dir'], 'radial_velocity', 'compiled_rv_info.csv' )
+    radial_velocity.make_rv_compiled_excel( object_frame_indices, csv_file_name, header_info, config_file )
         
 print( 'Everything is done.' )
     
