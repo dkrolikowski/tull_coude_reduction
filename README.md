@@ -33,7 +33,9 @@ The pipeline is designed to be modular so that it could be adapted for other ins
 
 This pipeline was primarily developed by [Daniel Krolikowski](https://dkrolikowski.github.io) (Steward Observatory, UT Austin). The first version of the pipeline was developed with input from Dr. Aaron Rizzuto (then UT Austin Postdoc).
 
-I thank Benjamin Tofflemire, Catherine Manea, Adam Kraus, Keith Hawkins, Bill Cochran, and Chris Sneden for conversations, advice, and data sources that enabled the development of this pipeline. Particular thanks to Benjamin Tofflemire as the lead developer of the saphires package used for RV measurement, Shubham Kanodia for writing barycorrpy to calculate barycentric velocity corrections to extremely high precision, and Curtis McCully for writing the Astro-SCRAPPY cosmic ray detection package.
+I thank Benjamin Tofflemire, Catherine Manea, Adam Kraus, Keith Hawkins, Bill Cochran, and Chris Sneden for conversations, advice, and data sources that enabled the development of this pipeline. 
+
+Particular thanks to Benjamin Tofflemire as the lead developer of the saphires package used for RV measurement, Shubham Kanodia for writing barycorrpy to calculate barycentric velocity corrections to extremely high precision, and Curtis McCully for writing the Astro-SCRAPPY cosmic ray detection package.
 
 This code depends on:
 - [astropy](https://www.astropy.org)
