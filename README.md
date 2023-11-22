@@ -1,4 +1,11 @@
-# tull_coude_reduction
+# Tull coude spectrograph reduction and analysis pipeline
+
+Reduction and analysis pipeline for the Tull coude spectrograph on the 2.7-m Harlan J. Smith Telescope at McDonald Observatory
+
+[(http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/)
+
+## Description
+
  Reduction pipeline for Tull coude spectrograph
 
  This pipeline is based on a python 2 reduction pipeline written by Daniel Krolikowski (based on initial work from Aaron Rizzuto) at UT Austin
