@@ -133,10 +133,10 @@ def make_rv_compiled_excel( file_indices, output_file_name, header_df, config ):
     out_dict = { 'file_token': header_df['file_token'].values[file_indices], 'object': header_df['object'].values[file_indices], 'rv': np.full( file_indices.size, np.nan ), 'rv_error': np.full( file_indices.size, np.nan ) }
     
     # Go through each of the science frames
-    for i_file in file_indices:
+    for i_file, file_index in enumerate( file_indices ):
         
         # Read in the spectra file
-        file_name = os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) )
+        file_name = os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[file_index] ) )
         file_in   = fits.open( file_name )
         
         # Make sure that the radial velocity extension exists!
