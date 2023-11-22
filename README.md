@@ -8,8 +8,8 @@ Reduction and analysis pipeline for the Tull coude spectrograph on the 2.7-m Har
 
 This is a end-to-end reduction and analysis pipeline for the Tull coude spectrograph at McDonald Observatory. 
 
-For reduction, the pipeline:
-- Starts with raw FITS files to generate CCD calibration files (bias, flat field, bad pixel mask) and perform basic image processing.
+For reduction, the pipeline stars with raw FITS files and then:
+- Generates CCD calibration files (bias, flat field, bad pixel mask) and perform basic image processing.
 - Uses the flat field to trace the echelle orders
 - Extracts 1D spectra for arc lamps and science observations
 - Fits a wavelength solution using arc lamp spectra and wavelength calibrates the science observations
