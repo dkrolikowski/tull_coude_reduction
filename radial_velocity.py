@@ -14,12 +14,15 @@ from astropy import constants
 from astropy.coordinates import SkyCoord
 from astropy.io import fits
 from astropy.time import Time
+from datetime import datetime
 from scipy.optimize import curve_fit
 from scipy.stats import median_abs_deviation
 
 import barycorrpy
 import os
 import saphires
+
+import pdb
 
 from radec_conv import MS2Deg
 
@@ -77,6 +80,50 @@ def bootstrap_sample_bf_rvs( bf_tar, bf_tar_spec, num_samples ):
 
     return rv_samples
 
+def plot_bootstrap_rv_result( bf_tar, bf_tar_spec, bc_vel, bootstrap_rv_samples, bootstrap_rv_value, bootstrap_rv_error, file_name ):
+    
+    # Combine the BFs
+    velocity_arr, combined_bf, _, _ = saphires.bf.weight_combine( bf_tar, bf_tar_spec, std_perc = 0.1 )
+    
+    # Make the figure -- two panels
+    fig, axs = plt.subplots( 1, 2, num = 1, clear = True )
+    fig.set_size_inches( 15, 7 )
+    
+    ### Left panel: BF and Gaussian fit
+    
+    # Plot the combined BF
+    axs[0].plot( velocity_arr + bc_vel, combined_bf, c = '#323232', lw = 1.5, label = None, zorder = 3 )
+    
+    # Plot the Gaussian fit!
+    fit, errs = curve_fit( saphires.utils.gaussian_off, velocity_arr, combined_bf, p0 = [ np.max( combined_bf ), velocity_arr[np.argmax( combined_bf )], 1, np.median( combined_bf ) ] )
+    fit_rv    = fit[1] + bc_vel + fit[1] * bc_vel / constants.c.to('km/s').value
+    
+    axs[0].plot( velocity_arr + bc_vel, saphires.utils.gaussian_off( velocity_arr, *fit ), '--', c = '#bf3465', lw = 1, label = 'Fit RV: {:.3f}'.format( fit_rv ), zorder = 3 )
+    
+    # Plot vertical lines for the bootstrap sample RVs
+    axs[0].axvline( x = bootstrap_rv_value, c = '#dfa5e5', label = 'Bootstrap RV: {:.3f} +/- {:.3f}'.format( bootstrap_rv_value, bootstrap_rv_error ), lw = 1.5, zorder = 2 )
+    axs[0].axvspan( bootstrap_rv_value - 3 * bootstrap_rv_error, bootstrap_rv_value + 3 * bootstrap_rv_error, color = '#dfa5e5', alpha = 0.1, zorder = 1 )
+
+    axs[0].set_xlabel( 'Velocity (km/s)' )
+    axs[0].set_ylabel( 'Brodening Function' )
+    axs[0].legend( fontsize = 'small' )
+    
+    ### Right panel: RV bootstrap samples
+    
+    axs[1].hist( bootstrap_rv_samples, bins = 50, histtype = 'step', color = '#323232', lw = 1.5, range = ( bootstrap_rv_value - 10 * bootstrap_rv_error, bootstrap_rv_value + 10 * bootstrap_rv_error ), zorder = 3 )
+    
+    # Plot vertical lines for the RV values
+    axs[1].axvline( x = bootstrap_rv_value, c = '#dfa5e5', label = 'Bootstrap RV: {:.3f} +/- {:.3f}'.format( bootstrap_rv_value, bootstrap_rv_error ), lw = 1.5, zorder = 2 )
+    axs[1].axvspan( bootstrap_rv_value - bootstrap_rv_error, bootstrap_rv_value + bootstrap_rv_error, color = '#dfa5e5', alpha = 0.1, zorder = 1 )
+
+    axs[1].set_xlabel( 'Bootstrap Sample RV (km/s)' )
+    axs[1].set_ylabel( 'Histogram Counts' )
+    axs[1].legend( fontsize = 'small' )
+
+    plt.savefig( file_name, bbox_inches = 'tight', pad_inches = 0.05 )
+    
+    return None
+
 ##### Main script
 
 def measure_radial_velocity( file_indices, header_df, config ):
@@ -105,7 +152,7 @@ def measure_radial_velocity( file_indices, header_df, config ):
         sky_coord = SkyCoord( file_in[0].header['ra'], file_in[0].header['dec'], unit = ( u.hourangle, u.deg ) )
                 
         star_info    = { 'ra': sky_coord.ra.value, 'dec': sky_coord.dec.value, 'epoch': 2451545.0 }
-        barycorr_vel = barycorrpy.get_BC_vel( obs_mid_jd, obsname = 'McDonald', leap_update = False, **star_info )[0] / 1000.0
+        barycorr_vel = barycorrpy.get_BC_vel( obs_mid_jd, obsname = 'McDonald', leap_update = False, **star_info )[0][0] / 1000.0
         
         ### Saphires broadening function prep -- create ls file, make data and template structures
         
@@ -153,11 +200,39 @@ def measure_radial_velocity( file_indices, header_df, config ):
         rv_value = np.median( bootstrap_rv_samples )
         rv_error = median_abs_deviation( bootstrap_rv_samples, scale = 'normal' )
         
-        plt.figure( figsize = ( 12, 6 ) )
+        plot_file_name = os.path.join( config['paths']['reduction_dir'], 'radial_velocity', 'bf_rv_result_{}.pdf'.format( header_df['file_token'].values[i_file] ) )
+        plot_bootstrap_rv_result( tar, tar_spec, barycorr_vel, bootstrap_rv_samples, rv_value, rv_error, plot_file_name )
         
-        plt.hist( bootstrap_rv_samples, bins = 50, histtype = 'step', color = '#d9d9d9', lw = 1.5, range = ( rv_value - 10 * rv_error, rv_value + 10 * rv_error ) )
-        plt.xlabel( 'Sampled RV (km/s)' )
-        plt.savefig( header_df['file_token'].values[i_file] + '_rv_boot_histogram.pdf', bbox_inches = 'tight', pad_inches = 0.05 )
-        plt.clf()
+        ### Append to output file!
+        
+        # Set up output BF arrays
+        output_bf_arrays = np.full( ( 122, tar_spec[tar[0]]['vel'].size ), np.nan )
+                
+        for i_order, order in enumerate( orders_to_use['order'].values ):
+            output_bf_arrays[order] = tar_spec[tar[i_order]]['bf_smooth']
+        
+        # Build a new HDU list with the continuum extension added
+        output_file = fits.HDUList( file_in[:5] + [ fits.ImageHDU( output_bf_arrays, name = 'radial velocity' ) ] )
+        
+        # Add radial velocity and error to the header
+        output_file[0].header['RVBF']  = ( rv_value, 'Broadening function RV (km/s)' )
+        output_file[0].header['ERVBF'] = ( rv_error, 'Broadening function RV Error (km/s)' )
+        
+        # Add information for reconstructing the BF velocity array in the radial velocity extension header
+        output_file['radial velocity'].header['VELSTART'] = ( tar_spec[tar[0]]['vel'][0], 'BF velocity array start (km/s)' )
+        output_file['radial velocity'].header['VELSTEP']  = ( tar_spec[tar[0]]['vel_spacing'], 'BF velocity array spacing (km/s)' )
+        output_file['radial velocity'].header['NVELPTS']  = ( tar_spec[tar[0]]['vel'].size, 'BF velocity array size' )
+        
+        # Add history to the primary header
+        output_file[0].header['HISTORY'] = 'Radial velocity measured on {}'.format( datetime.strftime( datetime.now(), '%Y/%m/%d' ) )
+        
+        # Write out the file
+        output_file.writeto( file_name, overwrite = True )
 
     return None
+
+
+
+
+
+
