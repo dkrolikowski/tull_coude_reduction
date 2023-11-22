@@ -10,15 +10,15 @@ import numpy as np
 
 from astropy.io import fits
 
-import ccd_calibrations
-import image_processing
-import trace_echelle
-import extract_spectrum
-import wavelength_solve_and_calibrate
-import continuum_fit
-import radial_velocity
-
-import reduction_utils
+# Import the reduction modules
+from modules import ( ccd_calibrations,
+                      image_processing,
+                      trace_echelle,
+                      extract_spectrum,
+                      wavelength_solve_and_calibrate,
+                      continuum_fit,
+                      radial_velocity,
+                      reduction_utils )
 
 ##### Set up for running the reduction pipeline! #####
 
