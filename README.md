@@ -6,7 +6,17 @@ Reduction and analysis pipeline for the Tull coude spectrograph on the 2.7-m Har
 
 ## Description
 
-This is a end-to-end reduction and analysis pipeline for the Tull coude spectrograph at McDonald Observatory. It starts with raw FITS files, performs basic CCD image processing, extracts 1D spectra, and wavelength calibrates. It also has analysis modules to continuum fit science spectra and measure radial velocities using broadening functions.
+This is a end-to-end reduction and analysis pipeline for the Tull coude spectrograph at McDonald Observatory. 
+
+For reduction, the pipeline:
+- Starts with raw FITS files to generate CCD calibration files (bias, flat field, bad pixel mask) and perform basic image processing.
+- Uses the flat field to trace the echelle orders
+- Extracts 1D spectra for arc lamps and science observations
+- Fits a wavelength solution using arc lamp spectra and wavelength calibrates the science observations
+
+It then proceeds to use analysis modules to:
+- Fit a spline continuum to science observations (in this case assuming absorption spectra, like for stars)
+- Compute broadening functions to measure stellar radial velocities, in most cases to sub-km/s precision (in the best cases to tens of m/s)
 
 This pipeline is based on an original Python 2 reduction pipeline written primarily by Daniel Krolikowski, with initial work by Aaron Rizzuto.
 The original pipeline can be found at: https://github.com/dkrolikowski/coudereduction
