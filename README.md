@@ -1,12 +1,12 @@
-# Tull coude spectrograph pipeline
+# Tull coudé spectrograph pipeline
 
-Reduction and analysis pipeline for the Tull coude spectrograph on the 2.7-m Harlan J. Smith Telescope at McDonald Observatory
+Reduction and analysis pipeline for the Tull coudé spectrograph on the 2.7-m Harlan J. Smith Telescope at McDonald Observatory
 
 [![Powered by Astropy](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/)
 
 ## Description
 
-This is a end-to-end reduction and analysis pipeline for the Tull coude spectrograph at McDonald Observatory. 
+This is a end-to-end reduction and analysis pipeline for the Tull coudé spectrograph at McDonald Observatory. 
 
 For reduction, the pipeline stars with raw FITS files and then:
 - Generates CCD calibration files (bias, flat field, bad pixel mask) and perform basic image processing
@@ -23,7 +23,7 @@ The original pipeline can be found at: https://github.com/dkrolikowski/couderedu
 
 This new version of the pipeline was written to make it more user friendly and modular, to ease future development or changes. I decided to start fresh rather than make modifications to the old Python 2 pipeline because of the significant changes to the structure and framework of the code.
 
-The pipeline is designed to be modular so that it could be adapted for other instruments or set-ups in the future. Certain modules in this code could be used univerisally and independent of the data source. However, this pipeline is still written with the Tull coude spectrograph in mind, so it has plenty of settings and code that are specific to this instrument.
+The pipeline is designed to be modular so that it could be adapted for other instruments or set-ups in the future. Certain modules in this code could be used univerisally and independent of the data source. However, this pipeline is still written with the Tull coudé spectrograph in mind, so it has plenty of settings and code that are specific to this instrument.
 
 ## Documentation
 
