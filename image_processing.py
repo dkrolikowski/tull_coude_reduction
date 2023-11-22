@@ -13,7 +13,6 @@ from astroscrappy import detect_cosmics
 from datetime import datetime
 
 import os
-import pdb
 
 ##### Functions
 

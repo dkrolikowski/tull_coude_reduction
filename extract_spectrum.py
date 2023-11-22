@@ -15,7 +15,7 @@ from scipy.stats import median_abs_deviation
 from datetime import datetime
 import os
 
-import tull_coude_utils
+import reduction_utils
 
 ##### Functions
 
@@ -83,10 +83,10 @@ def sum_extraction( flux_image, err_image, num_pixels, order_width, background_o
     
     if background_option == 'fixed':
         # Fit a polynomial to the counts across the top of the order image. A 2nd order polynomial, iterating once for a 10 sigma rejection
-        background_top_fit = tull_coude_utils.polynomial_fit_sigma_reject( np.arange( num_pixels ), np.mean( flux_image[:,:2], axis = 1 ), 2, 10, 1 )
+        background_top_fit = reduction_utils.polynomial_fit_sigma_reject( np.arange( num_pixels ), np.mean( flux_image[:,:2], axis = 1 ), 2, 10, 1 )
         
         # Fit a polynomial to the counts across the bottom of the order image. A 2nd order polynomial, iterating once for a 10 sigma rejection
-        background_bottom_fit = tull_coude_utils.polynomial_fit_sigma_reject( np.arange( num_pixels ), np.mean( flux_image[:,-2:], axis = 1 ), 2, 10, 1 )
+        background_bottom_fit = reduction_utils.polynomial_fit_sigma_reject( np.arange( num_pixels ), np.mean( flux_image[:,-2:], axis = 1 ), 2, 10, 1 )
 
     ### Now loop through each of the dispersion pixels
     for pixel in range( num_pixels ):
@@ -147,10 +147,10 @@ def optimal_extraction( flux_image, err_image, num_pixels, order_width, backgrou
     # If the background value is fixed these are used to define the background. If the background value will be fit, this will provide the initial guess for the background
 
     # Fit a polynomial to the counts across the top of the order image. A 2nd order polynomial, iterating once for a 10 sigma rejection
-    background_top_fit = tull_coude_utils.polynomial_fit_sigma_reject( np.arange( num_pixels ), np.mean( flux_image[:,:2], axis = 1 ), 2, 10, 1 )
+    background_top_fit = reduction_utils.polynomial_fit_sigma_reject( np.arange( num_pixels ), np.mean( flux_image[:,:2], axis = 1 ), 2, 10, 1 )
     
     # Fit a polynomial to the counts across the bottom of the order image. A 2nd order polynomial, iterating once for a 10 sigma rejection
-    background_bottom_fit = tull_coude_utils.polynomial_fit_sigma_reject( np.arange( num_pixels ), np.mean( flux_image[:,-2:], axis = 1 ), 2, 10, 1 )
+    background_bottom_fit = reduction_utils.polynomial_fit_sigma_reject( np.arange( num_pixels ), np.mean( flux_image[:,-2:], axis = 1 ), 2, 10, 1 )
     
     ### The first step: go through each dispersion pixel, and fit the cross dispersion flux slice with a Gaussian to get the spatial profile parameters over the order
         
@@ -190,7 +190,7 @@ def optimal_extraction( flux_image, err_image, num_pixels, order_width, backgrou
             p_guess = [ np.nanmean( flux_slice[7:10] ), 8, 1.5 ]
                 
             # Create a bespoke Gaussian function with the fixed background
-            gaussian_function_use = lambda x, a, m, s: tull_coude_utils.gaussian_1d( x, a, m, s, background )
+            gaussian_function_use = lambda x, a, m, s: reduction_utils.gaussian_1d( x, a, m, s, background )
             
         elif background_option == 'fit':
             
@@ -198,7 +198,7 @@ def optimal_extraction( flux_image, err_image, num_pixels, order_width, backgrou
             p_guess = [ np.nanmean( flux_slice[7:10] ), 8, 1.5, background ]
                 
             # Create a bespoke Gaussian function with the fixed background
-            gaussian_function_use = tull_coude_utils.gaussian_1d
+            gaussian_function_use = reduction_utils.gaussian_1d
 
         # Fit with the Gaussian! Put inside a try/except in case the fit fails! And break out if it does
         try:
@@ -247,7 +247,7 @@ def optimal_extraction( flux_image, err_image, num_pixels, order_width, backgrou
     for i_par in fit_coeffs_spatial_profile_pars.keys():
     
         # Sigma reject polynomial fit! 3rd degree polynomial and 1 iteration of 5 sigma rejection.
-        poly_fit = tull_coude_utils.polynomial_fit_sigma_reject( np.arange( num_pixels ), spatial_profile_fit_pars[:,i_par], 3, 5, 1, y_limits = spatial_profile_par_limits[i_par] )
+        poly_fit = reduction_utils.polynomial_fit_sigma_reject( np.arange( num_pixels ), spatial_profile_fit_pars[:,i_par], 3, 5, 1, y_limits = spatial_profile_par_limits[i_par] )
     
         # Output the fit coefficients
         fit_coeffs_spatial_profile_pars[i_par] = poly_fit
@@ -274,7 +274,7 @@ def optimal_extraction( flux_image, err_image, num_pixels, order_width, backgrou
             slice_fit_pars[i_par] = np.polyval( par_fit, pixel )
     
         # Evaluate with the spatial profile fit parameters and re-normalize! The background provided here is always zero, since it was already subtracted for getting the amplitude
-        gauss_fit_profile = tull_coude_utils.gaussian_1d( slice_xarr, *slice_fit_pars, 0 )
+        gauss_fit_profile = reduction_utils.gaussian_1d( slice_xarr, *slice_fit_pars, 0 )
         gauss_fit_profile = gauss_fit_profile / np.nansum( gauss_fit_profile )
     
         ### Extract!

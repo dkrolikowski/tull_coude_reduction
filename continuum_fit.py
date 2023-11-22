@@ -13,8 +13,6 @@ from scipy import interpolate, stats
 
 import os
 
-import tull_coude_utils
-
 ##### Functions
 
 def continuum_fit_with_spline( x_values, y_values, x_knot_spacing, lower_sigma_reject, upper_sigma_reject, max_iter = 10 ):

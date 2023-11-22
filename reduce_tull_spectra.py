@@ -18,7 +18,7 @@ import wavelength_solve_and_calibrate
 import continuum_fit
 import radial_velocity
 
-import tull_coude_utils
+import reduction_utils
 
 ##### Set up for running the reduction pipeline! #####
 
@@ -45,7 +45,7 @@ for dir_name in config_file['paths']['sub_dir_list']:
 ### Read in the FITS files and pull header information
 
 # Write the header information to a CSV file
-header_info = tull_coude_utils.make_header_manifest( config_file['paths']['header_info_file_name'] )
+header_info = reduction_utils.make_header_manifest( config_file['paths']['header_info_file_name'] )
 
 # Also generate a list of the object names from the file headers in lower case, for ease of searching through them later
 object_names_lowercase = np.array( [ object_name.lower() for object_name in header_info['object'].values ] )

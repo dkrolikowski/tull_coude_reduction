@@ -16,7 +16,7 @@ from scipy import optimize, signal, stats, interpolate
 
 import os
 
-import tull_coude_utils
+import reduction_utils
 
 ##### Functions
 
@@ -171,7 +171,7 @@ def find_arc_lamp_line_pixel_centers( flux, config ):
         
         # Fit!
         try:
-            line_fit, _ = optimize.curve_fit( tull_coude_utils.gaussian_1d, fit_range, flux[fit_range], p0 = p_guess )
+            line_fit, _ = optimize.curve_fit( reduction_utils.gaussian_1d, fit_range, flux[fit_range], p0 = p_guess )
         except:
             continue
         
@@ -269,7 +269,7 @@ def wavelength_solution_post_process( wave_sol_coeffs ):
     for i_par in range( wave_sol_coeffs.shape[1] ):
     
         # Sigma reject fit to the polynomial coefficient vs. order
-        fit, x_use, y_use = tull_coude_utils.polynomial_fit_sigma_reject( np.arange( wave_sol_coeffs.shape[0] ), wave_sol_coeffs[:,i_par], 4, 5, 3, return_data = True )
+        fit, x_use, y_use = reduction_utils.polynomial_fit_sigma_reject( np.arange( wave_sol_coeffs.shape[0] ), wave_sol_coeffs[:,i_par], 4, 5, 3, return_data = True )
         
         # The orders that were rejected in the fits
         reject_orders = np.setdiff1d( np.arange( wave_sol_coeffs.shape[0] ), x_use )
