@@ -16,6 +16,7 @@ import trace_echelle
 import extract_spectrum
 import wavelength_solve_and_calibrate
 import continuum_fit
+import radial_velocity
 
 import tull_coude_utils
 
@@ -167,6 +168,16 @@ if config_file['continuum_fit']['do_step']:
     
     # Run the spline continuum fitting module
     continuum_fit.fit_spectra_continuum( object_frame_indices, header_info, config_file )
+    
+if config_file['radial_velocity']['do_step']:
+    print( 'MODULE START: Calculating radial velocities' )
+    
+    # The file indices of the science frames to measure radial velocities for
+    not_object_names = [ 'test', 'solar', 'sol port', 'solar port', 'solport', 'solarport', 'solar port halpha' ]
+
+    object_frame_indices = np.where( np.logical_and( header_info['image_type'].values == 'object', np.all( [ object_names_lowercase != name for name in not_object_names ], axis = 0 ) ) )[0]
+
+    radial_velocity.measure_radial_velocity( [object_frame_indices[0]], header_info, config_file )
         
 print( 'Everything is done.' )
     
