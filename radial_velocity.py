@@ -20,6 +20,7 @@ from scipy.stats import median_abs_deviation
 
 import barycorrpy
 import os
+import tqdm
 import saphires
 
 ##### Functions
@@ -94,12 +95,12 @@ def bootstrap_sample_bf_rvs( bf_tar, bf_tar_spec, num_samples ):
 
         # Weight combine the broadening functions for the sampled orders
         v_comb, bf_comb, _, _ = saphires.bf.weight_combine( bf_tar[orders_to_sample], bf_tar_spec, std_perc = 0.1 )
-
+        
         # Fit with a Gaussian! Set initial guesses
         p0 = [ np.max( bf_comb ), v_comb[np.argmax( bf_comb )], 1, np.median( bf_comb ) ]
 
-        try:
-            fit, errs = curve_fit( saphires.utils.gaussian_off, v_comb, bf_comb, p0 = p0 )
+        try: # Uppoed the maxfev because it was failing out
+            fit, errs = curve_fit( saphires.utils.gaussian_off, v_comb, bf_comb, p0 = p0, maxfev = 10000 )
         except RuntimeError:
             continue
 
@@ -107,6 +108,47 @@ def bootstrap_sample_bf_rvs( bf_tar, bf_tar_spec, num_samples ):
         rv_samples[i_sample] = fit[1] + bf_tar_spec[bf_tar[0]]['rv_shift']
 
     return rv_samples
+
+def make_rv_compiled_excel( file_indices, output_file_name, header_df, config ):
+    """ Function to read in science frames with RV measurements and output them as a CSV of the night for easy access.
+
+    Parameters
+    ----------
+    file_indices : array
+        The file indices (in the header information file) of science observations with extracted spectra to measure RVs for.
+    output_file_name : str
+        File name for the output RV compilation CSV.
+    header_df : pandas DataFrame
+        The compiled information from the file headers.
+    config : dict
+        The overall config file defined using YAML with all parameters for running the reduction and analysis pipeline.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    # Make output dictionary with RV and RV error arrays
+    out_dict = { 'file_token': header_df['file_token'].values[file_indices], 'object': header_df['object'].values[file_indices], 'rv': np.full( file_indices.size, np.nan ), 'rv_error': np.full( file_indices.size, np.nan ) }
+    
+    # Go through each of the science frames
+    for i_file in file_indices:
+        
+        # Read in the spectra file
+        file_name = os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) )
+        file_in   = fits.open( file_name )
+        
+        # Make sure that the radial velocity extension exists!
+        if 'radial velocity' in file_in:
+            
+            out_dict['rv'][i_file]       = file_in[0].header['RVBF']
+            out_dict['rv_error'][i_file] = file_in[0].header['ERVBF']
+            
+    # Output as an excel file
+    pd.DataFrame( out_dict ).to_csv( output_file_name, index = False )
+    
+    return None
 
 ### Plotting functions
 
@@ -136,9 +178,9 @@ def plot_bootstrap_rv_result( bf_tar, bf_tar_spec, bc_vel, rv_samples, file_name
     """
     
     # First calculate the RV value and error
-    rv_value = np.median( rv_samples )
-    rv_error = median_abs_deviation( rv_samples, scale = 'normal' )
-
+    rv_value = np.nanmedian( rv_samples )
+    rv_error = median_abs_deviation( rv_samples, scale = 'normal', nan_policy = 'omit' )
+    
     ##### Make the plot
         
     # Make the figure -- two panels
@@ -205,7 +247,7 @@ def measure_radial_velocity( file_indices, header_df, config ):
     """
     
     ### Loop through each of the files to measure RV for
-    for i_file in file_indices:
+    for i_file in tqdm.tqdm( file_indices, desc = 'Measuring radial velocities', colour = 'green' ):
         
         ### Data preparation -- read in, normalize, get barycentric velocity correction
         
@@ -276,14 +318,19 @@ def measure_radial_velocity( file_indices, header_df, config ):
         # Apply barycentric velocity correction to the samples
         bootstrap_rv_samples = bootstrap_rv_samples + barycorr_vel + np.median( bootstrap_rv_samples ) * barycorr_vel / constants.c.to('km/s').value
 
+        # Check if all of the RV bootstrap samples are nans -- issue!
+        if np.all( np.isnan( bootstrap_rv_samples ) ):
+            print( 'ISSUE: All bootstrap RV samples are nans!' )
+            continue
+
         # Plot the result of the RV sampling/BF combination
         plot_file_name = os.path.join( config['paths']['reduction_dir'], 'radial_velocity', 'bf_rv_result_{}.pdf'.format( header_df['file_token'].values[i_file] ) )
         plot_bootstrap_rv_result( tar, tar_spec, barycorr_vel, bootstrap_rv_samples, plot_file_name )
         
         # Calculate RV value and error
-        bootstrap_rv_value = np.median( bootstrap_rv_samples )
-        bootstrap_rv_error = median_abs_deviation( bootstrap_rv_samples, scale = 'normal' )
-                
+        bootstrap_rv_value = np.nanmedian( bootstrap_rv_samples )
+        bootstrap_rv_error = median_abs_deviation( bootstrap_rv_samples, scale = 'normal', nan_policy = 'omit' )
+    
         ### Append to output file!
         
         # Set up output BF arrays
@@ -294,6 +341,9 @@ def measure_radial_velocity( file_indices, header_df, config ):
         
         # Build a new HDU list with the radial velocity extension added. Appends to first 5 extensions in the input file (through continuum, just in case there is overwriting weirdness to avoid duplication)
         output_file = fits.HDUList( file_in[:5] + [ fits.ImageHDU( output_bf_arrays, name = 'radial velocity' ) ] )
+        
+        # Add the barycentric velocity correction to the header
+        output_file[0].header['BARYCORR'] = ( barycorr_vel, 'Barycentric velocity correction (km/s)' )
         
         # Add radial velocity and error to the header, both primary header and the radial velocity extension
         for ext in [ 0, 5 ]:
