@@ -126,7 +126,6 @@ def make_rv_compiled_excel( file_indices, output_file_name, header_df, config ):
     Returns
     -------
     None.
-
     """
     
     # Make output dictionary with RV and RV error arrays
@@ -153,7 +152,7 @@ def make_rv_compiled_excel( file_indices, output_file_name, header_df, config ):
 ### Plotting functions
 
 def plot_bootstrap_rv_result( bf_tar, bf_tar_spec, bc_vel, rv_samples, file_name ):
-    """
+    """ Function to make two-panel plot for the RV bootstrap result. One panel shows the order by order and combined BFs, and one panel shows the histogram of the bootstrap RV samples.
 
     Parameters
     ----------
@@ -165,10 +164,6 @@ def plot_bootstrap_rv_result( bf_tar, bf_tar_spec, bc_vel, rv_samples, file_name
         The barycentric velocity correction (in km/s).
     rv_samples : array
         The bootstrap RV samples.
-    rv_value : TYPE
-        DESCRIPTION.
-    rv_error : TYPE
-        DESCRIPTION.
     file_name : str
         File name to save the plot to.
 
