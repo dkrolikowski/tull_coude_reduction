@@ -77,6 +77,21 @@ def continuum_fit_with_spline( x_values, y_values, x_knot_spacing, lower_sigma_r
 ##### Main script function
 
 def fit_spectra_continuum( file_indices, header_df, config ):
+    """ Main script to run for fitting the continuum of science spectra. Fits the continuum with a spline and outputs it to a new FITS extension.
+
+    Parameters
+    ----------
+    file_indices : array
+        The file indices (in the header information file) of science observations with extracted spectra to measure RVs for.
+    header_df : pandas DataFrame
+        The compiled information from the file headers.
+    config : dict
+        The overall config file defined using YAML with all parameters for running the reduction and analysis pipeline.
+
+    Returns
+    -------
+    None.
+    """
     
     for i_file in file_indices:
         
@@ -109,7 +124,7 @@ def fit_spectra_continuum( file_indices, header_df, config ):
         ### Output the continuum fit
         
         # Build a new HDU list with the continuum extension added
-        output_file = fits.HDUList( [ file_in[0], file_in['extracted flux'], file_in['extracted flux error'], file_in['wavelength'], fits.ImageHDU( continuum_values, name = 'continuum' ) ] )
+        output_file = fits.HDUList( file_in[:4] + [ fits.ImageHDU( continuum_values, name = 'continuum' ) ] )
         
         # Add history to the primary header
         output_file[0].header['HISTORY'] = 'Continuum fit on {}'.format( datetime.strftime( datetime.now(), '%Y/%m/%d' ) )
