@@ -178,7 +178,7 @@ if config_file['radial_velocity']['do_step']:
     object_frame_indices = np.where( np.logical_and( header_info['image_type'].values == 'object', np.all( [ object_names_lowercase != name for name in not_object_names ], axis = 0 ) ) )[0]
 
     # Run the BF computation and RV measurement module
-    # radial_velocity.measure_radial_velocity( object_frame_indices, header_info, config_file )
+    radial_velocity.measure_radial_velocity( object_frame_indices, header_info, config_file )
     
     # Run function to generate the night's compiled RV information csv
     csv_file_name = os.path.join( config_file['paths']['reduction_dir'], 'radial_velocity', 'compiled_rv_info.csv' )
