@@ -100,7 +100,7 @@ def bootstrap_sample_bf_rvs( bf_tar, bf_tar_spec, num_samples ):
         p0 = [ np.max( bf_comb ), v_comb[np.argmax( bf_comb )], 1, np.median( bf_comb ) ]
 
         try: # Uppoed the maxfev because it was failing out
-            fit, errs = curve_fit( saphires.utils.gaussian_off, v_comb, bf_comb, p0 = p0, maxfev = 10000 )
+            fit, errs = curve_fit( saphires.utils.gaussian_off, v_comb, bf_comb, p0 = p0, maxfev = 50000 )
         except RuntimeError:
             continue
 
