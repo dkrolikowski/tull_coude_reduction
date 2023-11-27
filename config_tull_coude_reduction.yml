@@ -1,13 +1,13 @@
 paths:
-  working_dir: '/Users/krolikowski/coude_data/20230814/' # Path to the directory containing the night's data (and in which the reduction will be saved)
+  working_dir: '/Users/krolikowski/coude_data/20230707/' # Path to the directory containing the night's data (and in which the reduction will be saved)
   reduction_dir: 'reduction_new/' # Reduction directory name
   sub_dir_list: [ 'cals', 'trace', 'object_files', 'spectrum_files', 'wavecal', 'radial_velocity' ] # Reduction sub-directories to create at start of reduction run
   code_dir: '/Users/krolikowski/codes/tull_coude_reduction/' # Path to the reduction code directory
   header_info_file_name: 'header_info.csv' # Name for the header info file
-  remove_images_at_end: False # If the processed echellogram images should be deleted at the end (for storage concerns)
+  remove_images_at_end: True # If the processed echellogram images should be deleted at the end (for storage concerns)
 
 calibrations:
-  do_step: False
+  do_step: True
   bias_image_type: 'zero' # The header image type for the bias frames
   flat_image_type: 'flat' # The header image type for the flat frames
   flat_object_names_to_discard: [ 'FF integration time test' ] # Object names to exclude from the creation of the flat field
@@ -15,7 +15,7 @@ calibrations:
   flat_field_bpm_limit: 1.0e-4 # Flat field value to mark below as a bad pixel
 
 image_process:
-  do_step: False
+  do_step: True
   arc_lamp_image_type: 'comp' # The header image type for the arc lamp spectra
   valid_arc_lamp_object_names: [ 'thar', 'a' ] # Object names to include as arc lamp frames
   invalid_science_object_names: [ 'test' ] # Object names to exclude as science frames
@@ -23,7 +23,7 @@ image_process:
   cosmic_subtract_niter: 4 # Set the number of iterations for the cosmic subtraction
 
 trace:
-  do_step: False
+  do_step: True
   order_xdisp_trace_width: 20 # Rough estimate of the cross dispersion width of a flat field order trace (in pixels)
   order_start_index: -33 # The dispersion-direction index to start searching for the order traces, just within the overscan region
   order_center_method: 'peak_find' # The method to find the initial guess for center of the order trace at the edge. Either peak_find or gradient_threshold
@@ -33,7 +33,7 @@ trace:
   percentile_cut_for_trace: 60.0 # Flux percentile to cut at when making final trace using object spectra (85 is default, this is not used)
 
 extraction:
-  do_step: False
+  do_step: True
   reverse_traced_orders: True # If True, reverse the order trace array. For the Tull, this is True so that order index 0 is bluest (rather than reddest).
   order_xdisp_width_extract: 16 # The cross dispersion width of an order for extraction (in pixels)
   science_extract_type: 'optimal_extraction' # The extraction method for science frames. Must be 'optimal_extraction' or 'sum_extraction'
@@ -42,7 +42,7 @@ extraction:
   lamp_background_subtract: 'none' # The background subtraction method for arc lamp frame extraciton. Must be 'none' or 'subtract'
 
 wavecal:
-  do_step: False
+  do_step: True
   min_arc_exp_time: 30 # The minimum exposure time for an arc lamp frame to be used for wavelength calibration
   use_prelim_sol_order_offset: True # Whether an order offset between observation and wavesol guess should be calculated 
   peak_threshold_mad_method: 'chunk_spectrum' # The method for estimating the noise to set prominence level of peak finding algorithm. Either 'full_spectrum' or 'chunk_spectrum'
@@ -57,7 +57,7 @@ wavecal:
   vel_resid_sigma_reject: 3 # The sigma level for rejecting velocity residuals in the iterative wavelength solution polynomial fitting
 
 continuum_fit:
-  do_step: False
+  do_step: True
   lower_sigma_reject: 2 # The sigma level for rejecting points below the continuum fit
   upper_sigma_reject: 5 # The sigma level for rejecting points above the continuum fit
   num_spectrum_chunks: 6 # The number of chunks to break the spectrum into (related to the number of spline knots)
@@ -67,7 +67,7 @@ radial_velocity:
   do_step: True
   orders_to_use_file_name: 'good_orders_tull_coude.csv' # File name of the pre-defined orders to use for BF computation
   template_file_name: 'lte05500-4.50-0.0.PHOENIX-ACES-AGSS-COND-2011-HiRes_3000-11000_A.csv' # File name of the spectrum template for BF computation
-  bf_velocity_span: 200 # The velocity span to compute the BF over (in km/s)
+  bf_velocity_span: 300 # The velocity span to compute the BF over (in km/s)
   bf_smooth_res: 60000 # The resolution to smooth the BF to (typically same as the instrument resolution)
   n_bootstrap_samples: 2500 # The number of bootstrap samples for BF combination and RV measurement
 

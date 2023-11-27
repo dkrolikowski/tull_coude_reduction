@@ -199,6 +199,9 @@ def plot_bootstrap_rv_result( bf_tar, bf_tar_spec, bc_vel, rv_samples, file_name
     # Plot vertical lines for the adopted RV value and 3 sigma uncertainty range
     axs[0].axvline( x = rv_value, c = '#dfa5e5', label = 'Bootstrap RV: {:.3f} +/- {:.3f}'.format( rv_value, rv_error ), lw = 1.5, zorder = 2 )
     axs[0].axvspan( rv_value - 3 * rv_error, rv_value + 3 * rv_error, color = '#dfa5e5', alpha = 0.1, zorder = 1 )
+    
+    # Also plot a vertical line at the barycentric correction velocity
+    axs[0].axvline( x = bc_vel, c = '#874310', lw = 0.75, zorder = 2, label = 'Barycentric Velocity Correction: {:.2f} km/s'.format( bc_vel ) )
 
     axs[0].set_xlabel( 'Velocity (km/s)' )
     axs[0].set_ylabel( 'Brodening Function' )
