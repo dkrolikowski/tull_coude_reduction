@@ -16,7 +16,7 @@ from scipy import optimize, signal, stats, interpolate
 
 import os
 
-import reduction_utils
+from . import reduction_utils
 
 ##### Functions
 
@@ -250,7 +250,7 @@ def fit_wavelength_solution( pixel_centroids, prelim_wavelengths, line_list_wave
         mad_reject = np.abs( velocity_residuals - np.nanmedian( velocity_residuals ) ) > config['wavecal']['vel_resid_sigma_reject'] * velocity_residual_mad
     
         # If there are no more points to reject -- break out of the loop!
-        if mad_reject.sum() == 0:
+        if mad_reject.sum() == 0 or (~mad_reject).sum() < ( config['wavecal']['wave_cal_poly_order'] + 1 ):
             break
         else:
             line_centroid_record['pixel'].append( line_centroid_record['pixel'][-1][~mad_reject] )

@@ -15,7 +15,7 @@ from scipy.stats import median_abs_deviation
 from datetime import datetime
 import os
 
-import reduction_utils
+from . import reduction_utils
 
 ##### Functions
 
