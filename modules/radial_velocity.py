@@ -191,7 +191,7 @@ def plot_bootstrap_rv_result( bf_tar, bf_tar_spec, bc_vel, rv_samples, file_name
     axs[0].plot( velocity_arr + bc_vel, combined_bf, c = '#323232', lw = 1.5, label = None, zorder = 3 )
     
     # Plot the Gaussian fit!
-    fit, errs = curve_fit( saphires.utils.gaussian_off, velocity_arr, combined_bf, p0 = [ np.max( combined_bf ), velocity_arr[np.argmax( combined_bf )], 1, np.median( combined_bf ) ] )
+    fit, errs = curve_fit( saphires.utils.gaussian_off, velocity_arr, combined_bf, p0 = [ np.max( combined_bf ), velocity_arr[np.argmax( combined_bf )], 1, np.median( combined_bf ) ], maxfev = 50000 )
     fit_rv    = fit[1] + bc_vel + fit[1] * bc_vel / constants.c.to('km/s').value
     
     axs[0].plot( velocity_arr + bc_vel, saphires.utils.gaussian_off( velocity_arr, *fit ), '--', c = '#bf3465', lw = 1, label = 'Fit RV: {:.3f}'.format( fit_rv ), zorder = 3 )
@@ -205,7 +205,7 @@ def plot_bootstrap_rv_result( bf_tar, bf_tar_spec, bc_vel, rv_samples, file_name
 
     axs[0].set_xlabel( 'Velocity (km/s)' )
     axs[0].set_ylabel( 'Brodening Function' )
-    axs[0].legend( fontsize = 'small' )
+    axs[0].legend( fontsize = 'x-small' )
     
     ### Right panel: RV bootstrap samples
     
