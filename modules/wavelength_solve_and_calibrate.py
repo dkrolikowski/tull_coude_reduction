@@ -16,7 +16,7 @@ from scipy import optimize, signal, stats, interpolate
 
 import os
 
-from . import reduction_utils
+from tull_coude_reduction.modules import reduction_utils
 
 ##### Functions
 
@@ -204,10 +204,10 @@ def fit_wavelength_solution( pixel_centroids, prelim_wavelengths, line_list_wave
     line_centroid_record : dict
         A dictionary containing a record of the fitting iterations. Each entry is a list of arrays, with each entry being a subsequent fitting iteration.
         Contains keys:
-            'pixel': the pixel centroids used in the fit iteration.
-            'wavelength': the corresponding wavelength centroids use in the fit iteration.
-            'vel_resid': the residuals between the input wavelength centroids and polynomial fit values in velocity (km/s)
-            'poly_coeffs': that iteration's polynomial fit coefficients. The last entry is the same as the output 'wave_poly_fit'
+        'pixel': the pixel centroids used in the fit iteration.
+        'wavelength': the corresponding wavelength centroids use in the fit iteration.
+        'vel_resid': the residuals between the input wavelength centroids and polynomial fit values in velocity (km/s)
+        'poly_coeffs': that iteration's polynomial fit coefficients. The last entry is the same as the output 'wave_poly_fit'
     """
     
     # Turn the pixel centroids into wavelength centroids based on the initial wavelength solution guess
