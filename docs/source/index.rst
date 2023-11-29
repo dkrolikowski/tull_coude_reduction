@@ -28,7 +28,7 @@ There is also discussion of where the pipeline is more general/modular and where
    page_1d_extraction
    page_wavelength_cal
    page_continuum_fit
-   api
+   api_index
 
 Indices and tables
 ==================

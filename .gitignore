@@ -3,4 +3,4 @@
 
 # sphinx documentation
 docs/build
-docs/source/generated
+docs/source/autoapi

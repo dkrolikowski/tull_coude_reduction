@@ -18,12 +18,15 @@ author = 'Daniel Krolikowski'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['sphinx.ext.napoleon', 'sphinx.ext.autosummary']
+extensions = ['sphinx.ext.napoleon', 'autoapi.extension']
+
+autoapi_dirs = ['../../modules']
+autoapi_type = "python"
+autoapi_keep_files = True
+autoapi_add_toctree_entry = False
 
 templates_path = ['_templates']
 exclude_patterns = []
-
-
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
