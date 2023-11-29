@@ -1,2 +1,6 @@
 *.pyc
 .DS_Store
+
+# sphinx documentation
+docs/build
+docs/source/generated
