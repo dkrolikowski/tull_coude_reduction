@@ -1,6 +1,7 @@
 """ Functions for extracting the echelle spectra.
 
 Created by DMK on 10/22/2023
+
 Last updated by DMK on 11/6/2023
 """
 

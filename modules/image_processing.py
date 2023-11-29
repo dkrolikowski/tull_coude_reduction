@@ -2,6 +2,7 @@
 Library of functions to process images and write out the image files.
 
 Created by DMK on 10/14/2023
+
 Last updated by DMK on 10/14/2023
 """
 

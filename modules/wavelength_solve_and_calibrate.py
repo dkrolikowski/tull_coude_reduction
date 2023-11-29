@@ -1,6 +1,7 @@
 """ Functions to wavelength calibrate the spectra. Finds lines in arc lamp spectra (ThAr), matches them to a line list based on a preliminary input wavelength solution, and then iteratively fits a polynomial solution.
 
 Created by DMK on 11/11/2023
+
 Last updated by DMK on 11/13/2023
 """
 

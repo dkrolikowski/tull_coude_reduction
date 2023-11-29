@@ -1,6 +1,7 @@
 """ Functions to find and trace the echelle orders, fit each order's trace with a polynomial, and write the trace to a file for use in the extraction module.
 
 Created by DMK on 10/16/2023
+
 Last updated by DMK on 10/18/2023
 """
 

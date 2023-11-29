@@ -1,6 +1,7 @@
 """ Functions to continuum fit spectra with a spline.
 
 Created by DMK on 11/13/2023
+
 Last updated by DMK on 11/13/2023
 """
 
