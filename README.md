@@ -28,6 +28,10 @@ The pipeline is designed to be modular so that it could be adapted for other ins
 
 ## Documentation
 
+The documentation for the pipeline is here: https://tull-coude-reduction.readthedocs.io.
+
+It includes an overview of the pipeline structure, how to run the pipeline, and detailed descriptions of the various algorithms and steps to process, extract, and calibrate the spectra.
+
 ## Installation
 
 ## Acknowledgements
