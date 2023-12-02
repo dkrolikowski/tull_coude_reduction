@@ -3,6 +3,7 @@
 Reduction and analysis pipeline for the Tull coudé spectrograph on the 2.7-m Harlan J. Smith Telescope at McDonald Observatory
 
 [![Powered by Astropy](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/)
+[![Documentation Status](https://readthedocs.org/projects/tull-coude-reduction/badge/?version=latest)](https://tull-coude-reduction.readthedocs.io/en/latest/?badge=latest)
 
 ## Description
 
