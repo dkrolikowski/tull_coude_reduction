@@ -1,5 +1,5 @@
-Pipeline Overview and Installation
-==================================
+Pipeline Overview and Structure
+===============================
 
 Overview of the pipeline steps
 ------------------------------
@@ -25,7 +25,12 @@ Then there is a main reduction run file that wraps all these modules together an
 Briefly discuss the config file: it will be touched upon in each page for the modules and then in a separate page where everything is explicitly defined.
 There is a config file included in the package that is meant to be a template.
 
-Installation of the pipeline
-----------------------------
+Pipeline structure: how to run it
+---------------------------------
 
 I will put instructions on installing the package here once I get to that.
+
+.. _target_to_config_description:
+
+The reduction configuration file
+--------------------------------
