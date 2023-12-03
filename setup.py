@@ -14,7 +14,7 @@ setup( name = 'tull_coude_reduction',
                        ],
        project_urls = { 'Documentation': 'https://tull-coude-reduction.readthedocs.io/en/latest/'
                        },
-       packages = [ 'tull_coude_reduction', 'tull_coude_reduction.modules' ],
+       packages = [ '.', 'modules' ],
        python_requires = '>=3',
        install_requires = [ 'numpy',
                             'matplotlib',
@@ -25,6 +25,11 @@ setup( name = 'tull_coude_reduction',
                             'saphires',
                             'barycorrpy',
                             'tqdm',
-                            'yaml'
+                            'pyyaml',
+                            'urllib3==1.26.15',
+                            'PyQt5',
+                            'PySide2',
+                            'emcee',
+                            'corner'
                             ]
        )
