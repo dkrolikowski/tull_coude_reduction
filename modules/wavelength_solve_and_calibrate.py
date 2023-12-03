@@ -534,14 +534,14 @@ def wavelength_solution( file_indices, header_df, config ):
     ### Read things in that we need for fitting the wavelength solution
     
     # The preliminary wavelength solution guess
-    wavelength_solution_guess = np.load( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['wave_sol_guess'] ) )
+    wavelength_solution_guess = np.load( os.path.join( config['paths']['code_data_dir'], config['wavecal']['wave_sol_guess'] ) )
     
     # The arc lamp line list
-    lamp_line_list_file = pd.read_csv( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['line_list'] ) )
+    lamp_line_list_file = pd.read_csv( os.path.join( config['paths']['code_data_dir'], config['wavecal']['line_list'] ) )
     lamp_line_list = lamp_line_list_file['wavelength'].values
     
     # Read in the wavelength vs flux CSV of the ThAr photron reference spectrum
-    arc_ref_spectrum = pd.read_csv( os.path.join( config['paths']['code_dir'], 'data', config['wavecal']['arc_ref_file'] ) )
+    arc_ref_spectrum = pd.read_csv( os.path.join( config['paths']['code_data_dir'], config['wavecal']['arc_ref_file'] ) )
     
     ### Go through each of the input file indices for the arc lamps to use
     for i_file in file_indices:

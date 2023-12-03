@@ -10,15 +10,19 @@ import numpy as np
 
 from astropy.io import fits
 
-# Import the reduction modules
-from modules import ( ccd_calibrations,
-                      image_processing,
-                      trace_echelle,
-                      extract_spectrum,
-                      wavelength_solve_and_calibrate,
-                      continuum_fit,
-                      radial_velocity,
-                      reduction_utils )
+# Import pipeline and reduction modules
+
+import tull_coude_reduction
+
+from tull_coude_reduction.modules import ( 
+    ccd_calibrations,
+    image_processing,
+    trace_echelle,
+    extract_spectrum,
+    wavelength_solve_and_calibrate,
+    continuum_fit,
+    radial_velocity,
+    reduction_utils )
 
 ##### Set up for running the reduction pipeline! #####
 
@@ -33,6 +37,10 @@ config_file = yaml.safe_load( open( args.config_file, 'r' ) )
 
 print( 'PIPELINE START: Running reduction pipeline for night at data path: {}'.format( config_file['paths']['working_dir'] ) )
 
+### Add an entry to the config paths section pointing to the data folder in the code directory
+
+config_file['paths']['code_data_dir'] = os.path.join( tull_coude_reduction.__path__[0], 'data' )
+
 ### Set up the reduction directories for holding the pipeline output
 
 # cd into the working directory
@@ -45,7 +53,7 @@ for dir_name in config_file['paths']['sub_dir_list']:
 ### Read in the FITS files and pull header information
 
 # Write the header information to a CSV file
-header_info = reduction_utils.make_header_manifest( config_file['paths']['header_info_file_name'] )
+header_info = reduction_utils.make_header_manifest( config_file['general']['header_info_file_name'] )
 
 # Also generate a list of the object names from the file headers in lower case, for ease of searching through them later
 object_names_lowercase = np.array( [ object_name.lower() for object_name in header_info['object'].values ] )

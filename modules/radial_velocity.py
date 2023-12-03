@@ -275,7 +275,7 @@ def measure_radial_velocity( file_indices, header_df, config ):
         ### Saphires broadening function prep -- create ls file, make data and template structures
         
         # Read in the pre-defined orders to use file
-        orders_to_use = pd.read_csv( os.path.join( config['paths']['code_dir'], 'data', config['radial_velocity']['orders_to_use_file_name'] ) )
+        orders_to_use = pd.read_csv( os.path.join( config['paths']['code_data_dir'], config['radial_velocity']['orders_to_use_file_name'] ) )
         
         # Make the ls file
         temp_ls_file_name = 'temp_{}.ls'.format( header_df['file_token'].values[i_file] )
@@ -285,7 +285,7 @@ def measure_radial_velocity( file_indices, header_df, config ):
         tar, tar_spec = saphires.io.read_vars( file_in['wavelength'].data, flux_cont_norm, header_df['file_token'].values[i_file], w_file = temp_ls_file_name, combine_all = False )
 
         # Make the saphires template spetrum structure. Read in the csv file from the code data directory and make into saphires structure
-        template_csv  = pd.read_csv( os.path.join( config['paths']['code_dir'], 'data', config['radial_velocity']['template_file_name'] ) )
+        template_csv  = pd.read_csv( os.path.join( config['paths']['code_data_dir'], config['radial_velocity']['template_file_name'] ) )
         template_spec = saphires.io.read_vars( template_csv['wavelength'], template_csv['flux'], config['radial_velocity']['template_file_name'], temp = True )
 
         # Prepare the spectra to run the broadening function
