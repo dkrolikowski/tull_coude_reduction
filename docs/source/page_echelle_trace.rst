@@ -11,7 +11,7 @@ Tracing Echelle Orders
 
 Before extracting 1D spectra from the processed images, we need to define the echelle order traces. The trace defines the center of the spectral order in the cross dispersion direction across the dispersion axis, along which the 1D spectrum can be extracted. In this pipeline, we trace orders using the flat field. The order tracing functionality is hosted in the :py:meth:`trace_echelle <trace_echelle>` module.
 
-The options for this step in the reduction are defined in the ``trace`` section of the main *config* YAML file. A full description of the options can be found :ref:`here <target_to_config_description>`, and will be referenced where relevent in the descriptions below.
+The options for this step in the reduction are defined in the ``trace`` section of the main *config* YAML file, which is described in full :ref:`here <target_to_config_description>`.
 
 General outline of order tracing steps
 --------------------------------------
@@ -126,9 +126,12 @@ It is a FITS file with 3 extensions:
 
 The primary extension has additional keywords relevent to the trace finding:
 
-- ``NORDERS``: the number of orders traced.
-- ``POLYDEG``: the polynomial degree used for fitting the trace.
-- ``HISTORY`` entries with details of various other options and parameters used (e.g. intial order center finding algorithm used, bad orders whose trace fit parameters were corrected.)
-
+============ ===================================================================================================================================================================================
+**Keyword**  **Description**
+------------ -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+``NORDERS``  the number of orders traced.
+``POLYDEG``  the polynomial degree used for fitting the trace.
+``HISTORY``  multiple entries with details of various other options and parameters used (e.g. intial order center finding algorithm used, bad orders whose trace fit parameters were corrected.)
+============ ===================================================================================================================================================================================
 
 
