@@ -60,6 +60,18 @@ object_names_lowercase = np.array( [ object_name.lower() for object_name in head
 
 ##### Now run the reduction pipeline modules! #####
 
+### Check the config general "do_all_steps" flag -- if True, override individual module "do_steps" and do everything!
+
+if config_file['general']['do_all_steps']:
+    
+    # Go through each of the config sections
+    for config_key in config_file.keys():
+        
+        # Only work on sections that have a "do_step" key
+        if 'do_step' in config_file[config_key]:
+            config_file[config_key]['do_step'] = True
+        
+
 ### Build CCD calibration files -- bias, flat, and bad pixel mask
 
 # Get the file indices for the bias frames in the header info file, with the image type string defined in the config file (Tull coude: 'zero')
