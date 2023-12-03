@@ -82,7 +82,7 @@ def sum_extraction( flux_image, err_image, num_pixels, order_width, background_o
     
     ### Get a background value if the config says to background subtract
     
-    if background_option == 'fixed':
+    if background_option == 'subtract':
         # Fit a polynomial to the counts across the top of the order image. A 2nd order polynomial, iterating once for a 10 sigma rejection
         background_top_fit = reduction_utils.polynomial_fit_sigma_reject( np.arange( num_pixels ), np.mean( flux_image[:,:2], axis = 1 ), 2, 10, 1 )
         
