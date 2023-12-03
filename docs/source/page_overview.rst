@@ -4,7 +4,7 @@ Pipeline Overview and Structure
 Overview of the pipeline steps
 ------------------------------
 
-The pipeline follows the general steps for reducting data from an echelle spectrograph.
+The pipeline follows the general steps for reducing data from an echelle spectrograph.
 These general steps are:
 
 1. Generate a header manifest
