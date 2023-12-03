@@ -20,7 +20,7 @@ There is also discussion of where the pipeline is more general/modular and where
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Contents
 
    page_overview
    page_image_cal_and_process
@@ -28,6 +28,12 @@ There is also discussion of where the pipeline is more general/modular and where
    page_1d_extraction
    page_wavelength_cal
    page_continuum_fit
+   page_radial_velocity
+
+
+.. toctree::
+   :maxdepth: 1
+
    api_index
 
 Indices and tables
