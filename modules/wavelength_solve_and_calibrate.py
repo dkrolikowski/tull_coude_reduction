@@ -534,22 +534,22 @@ def wavelength_solution( file_indices, header_df, config ):
     ### Read things in that we need for fitting the wavelength solution
     
     # The preliminary wavelength solution guess
-    wavelength_solution_guess = np.load( os.path.join( config['paths']['code_data_dir'], config['wavecal']['wave_sol_guess'] ) )
+    wavelength_solution_guess = np.load( os.path.join( config['general']['code_data_dir'], config['wavecal']['wave_sol_guess'] ) )
     
     # The arc lamp line list
-    lamp_line_list_file = pd.read_csv( os.path.join( config['paths']['code_data_dir'], config['wavecal']['line_list'] ) )
+    lamp_line_list_file = pd.read_csv( os.path.join( config['general']['code_data_dir'], config['wavecal']['line_list'] ) )
     lamp_line_list = lamp_line_list_file['wavelength'].values
     
     # Read in the wavelength vs flux CSV of the ThAr photron reference spectrum
-    arc_ref_spectrum = pd.read_csv( os.path.join( config['paths']['code_data_dir'], config['wavecal']['arc_ref_file'] ) )
+    arc_ref_spectrum = pd.read_csv( os.path.join( config['general']['code_data_dir'], config['wavecal']['arc_ref_file'] ) )
     
     ### Go through each of the input file indices for the arc lamps to use
     for i_file in file_indices:
         
-        file_in = fits.open( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ) )
+        file_in = fits.open( os.path.join( config['general']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ) )
         
         # Make directory for this frame's wavelength solution
-        frame_dir_path = os.path.join( config['paths']['reduction_dir'], 'wavecal', header_df['file_token'].values[i_file] )
+        frame_dir_path = os.path.join( config['general']['reduction_dir'], 'wavecal', header_df['file_token'].values[i_file] )
         
         # Make the sub-directories for each of the types of plots
         for plot_dir_name in [ 'fit_residuals', 'fit_iter_spectra', 'adopted_sol_spectra_zoom' ]:
@@ -608,7 +608,7 @@ def wavelength_solution( file_indices, header_df, config ):
         output_file[0].header['HISTORY'] = 'Spectrum wavelength calibrated on {}'.format( datetime.strftime( datetime.now(), '%Y/%m/%d' ) )
 
         # Write out the file with the wavelength solution -- overwrite the previous file
-        output_file.writeto( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ), overwrite = True )
+        output_file.writeto( os.path.join( config['general']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ), overwrite = True )
             
     return None
 
@@ -638,7 +638,7 @@ def wavelength_calibrate( obj_file_indices, ref_file_indices, header_df, config 
     
     for i_file in ref_file_indices:
         
-        file_name = os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) )
+        file_name = os.path.join( config['general']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) )
         
         file_in = fits.getdata( file_name, extname = 'wavelength' )
         
@@ -655,7 +655,7 @@ def wavelength_calibrate( obj_file_indices, ref_file_indices, header_df, config 
         ### Output the wavelength calibrated file
         
         # Read in the spectrum file to append wavelength solution to
-        file_name = os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) )
+        file_name = os.path.join( config['general']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) )
         file_in   = fits.open( file_name )
                 
         # Build the output file
@@ -671,7 +671,7 @@ def wavelength_calibrate( obj_file_indices, ref_file_indices, header_df, config 
         output_file[0].header['HISTORY'] = 'Spectrum wavelength calibrated on {}'.format( datetime.strftime( datetime.now(), '%Y/%m/%d' ) )
 
         # Write out the file with the wavelength solution -- overwrite the previous file
-        output_file.writeto( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ), overwrite = True )
+        output_file.writeto( os.path.join( config['general']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ), overwrite = True )
 
     return None
 

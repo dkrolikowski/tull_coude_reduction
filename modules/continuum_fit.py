@@ -95,7 +95,7 @@ def fit_spectra_continuum( file_indices, header_df, config ):
     for i_file in file_indices:
         
         # Read in the spectra file
-        file_name = os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) )
+        file_name = os.path.join( config['general']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) )
         file_in   = fits.open( file_name )
         
         # Empty array for the continuum fit values

@@ -341,7 +341,7 @@ def extract_spectrum( file_indices, trace, header_df, extraction_method, backgro
         ### Set up the frame to extract
         
         # The raw file name to read in and read it in
-        file_name  = os.path.join( config['paths']['reduction_dir'], 'object_files', 'tullcoude_{}.fits'.format( header_df['file_token'].values[i_file] ) )
+        file_name  = os.path.join( config['general']['reduction_dir'], 'object_files', 'tullcoude_{}.fits'.format( header_df['file_token'].values[i_file] ) )
         input_file = fits.open( file_name )
         
         print( 'Extracting frame {}'.format( header_df['file_token'].values[i_file] ) )
@@ -385,6 +385,6 @@ def extract_spectrum( file_indices, trace, header_df, extraction_method, backgro
         
         output_file[0].header['HISTORY'] = 'Spectrum extracted on {}'.format( datetime.strftime( datetime.now(), '%Y/%m/%d' ) )
                 
-        output_file.writeto( os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ), overwrite = True )
+        output_file.writeto( os.path.join( config['general']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) ), overwrite = True )
 
     return None

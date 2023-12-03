@@ -433,7 +433,7 @@ def get_trace( flat_field, config ):
     """
     
     # Pull out the path that points to the trace directory
-    trace_dir = os.path.join( config['paths']['reduction_dir'], 'trace' )
+    trace_dir = os.path.join( config['general']['reduction_dir'], 'trace' )
 
     ### Find the starting location of the order traces
     

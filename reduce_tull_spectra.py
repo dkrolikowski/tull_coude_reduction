@@ -35,20 +35,20 @@ args = parser.parse_args()
 # Read in the YAML config file for this reduction run
 config_file = yaml.safe_load( open( args.config_file, 'r' ) )
 
-print( 'PIPELINE START: Running reduction pipeline for night at data path: {}'.format( config_file['paths']['working_dir'] ) )
+print( 'PIPELINE START: Running reduction pipeline for night at data path: {}'.format( config_file['general']['working_dir'] ) )
 
 ### Add an entry to the config paths section pointing to the data folder in the code directory
 
-config_file['paths']['code_data_dir'] = os.path.join( tull_coude_reduction.__path__[0], 'data' )
+config_file['general']['code_data_dir'] = os.path.join( tull_coude_reduction.__path__[0], 'data' )
 
 ### Set up the reduction directories for holding the pipeline output
 
 # cd into the working directory
-os.chdir( config_file['paths']['working_dir'] )
+os.chdir( config_file['general']['working_dir'] )
 
 # Make the directory tree required within the working directory
-for dir_name in config_file['paths']['sub_dir_list']:
-    os.makedirs( os.path.join( config_file['paths']['reduction_dir'], dir_name ), exist_ok = True )
+for dir_name in config_file['general']['sub_dir_list']:
+    os.makedirs( os.path.join( config_file['general']['reduction_dir'], dir_name ), exist_ok = True )
 
 ### Read in the FITS files and pull header information
 
@@ -70,7 +70,6 @@ if config_file['general']['do_all_steps']:
         # Only work on sections that have a "do_step" key
         if 'do_step' in config_file[config_key]:
             config_file[config_key]['do_step'] = True
-        
 
 ### Build CCD calibration files -- bias, flat, and bad pixel mask
 
@@ -105,9 +104,9 @@ if config_file['image_process']['do_step']:
     frame_indices_to_process = np.sort( np.concatenate( [ arc_frame_indices, object_frame_indices ] ) )
     
     # Read in the CCD calibration files necessary for image processing
-    super_bias     = fits.open( os.path.join( config_file['paths']['reduction_dir'], 'cals', 'super_bias.fits' ) )
-    flat_field     = fits.open( os.path.join( config_file['paths']['reduction_dir'], 'cals', 'flat_field.fits' ) )
-    bad_pixel_mask = fits.open( os.path.join( config_file['paths']['reduction_dir'], 'cals', 'bad_pixel_mask.fits' ) )
+    super_bias     = fits.open( os.path.join( config_file['general']['reduction_dir'], 'cals', 'super_bias.fits' ) )
+    flat_field     = fits.open( os.path.join( config_file['general']['reduction_dir'], 'cals', 'flat_field.fits' ) )
+    bad_pixel_mask = fits.open( os.path.join( config_file['general']['reduction_dir'], 'cals', 'bad_pixel_mask.fits' ) )
     
     # Run image processing module
     image_processing.build_images( frame_indices_to_process, super_bias, flat_field, bad_pixel_mask, header_info, config_file )
@@ -119,7 +118,7 @@ if config_file['trace']['do_step']:
     print( 'MODULE START: Tracing echelle orders.' )
     
     # Read in the flat field
-    flat_field = fits.open( os.path.join( config_file['paths']['reduction_dir'], 'cals', 'flat_field.fits' ) )
+    flat_field = fits.open( os.path.join( config_file['general']['reduction_dir'], 'cals', 'flat_field.fits' ) )
     
     # Run trace finding module
     trace_echelle.get_trace( flat_field, config_file )
@@ -131,7 +130,7 @@ if config_file['extraction']['do_step']:
     print( 'MODULE START: Extracting 1D spectra.' )
     
     # Read in the trace file
-    trace_file = fits.open( os.path.join( config_file['paths']['reduction_dir'], 'trace', 'trace.fits' ) )
+    trace_file = fits.open( os.path.join( config_file['general']['reduction_dir'], 'trace', 'trace.fits' ) )
         
     ## Extract the arc lamp spectra -- separate from the science object spectra because no optimal extraction
     
@@ -170,7 +169,7 @@ if config_file['wavecal']['do_step']:
     ## Get the file indices for the science spectra to wavelength calibrate and calibrate them
     
     # Just take all of the files that have extracted spectra files other than the arc lamp frames used for the wavelength solution
-    frame_indices_to_wavecal = [ i for i in range( header_info.shape[0] ) if os.path.exists( os.path.join( config_file['paths']['reduction_dir'], 'spectrum_files/tullcoude_{}_spectrum.fits'.format( header_info['file_token'].values[i] ) ) ) ]
+    frame_indices_to_wavecal = [ i for i in range( header_info.shape[0] ) if os.path.exists( os.path.join( config_file['general']['reduction_dir'], 'spectrum_files/tullcoude_{}_spectrum.fits'.format( header_info['file_token'].values[i] ) ) ) ]
     frame_indices_to_wavecal = np.setdiff1d( frame_indices_to_wavecal, arc_frame_indices )
     
     # Run the wavelength calibration module
@@ -201,7 +200,7 @@ if config_file['radial_velocity']['do_step']:
     radial_velocity.measure_radial_velocity( object_frame_indices, header_info, config_file )
     
     # Run function to generate the night's compiled RV information csv
-    csv_file_name = os.path.join( config_file['paths']['reduction_dir'], 'radial_velocity', 'compiled_rv_info.csv' )
+    csv_file_name = os.path.join( config_file['general']['reduction_dir'], 'radial_velocity', 'compiled_rv_info.csv' )
     radial_velocity.make_rv_compiled_excel( object_frame_indices, csv_file_name, header_info, config_file )
         
 print( 'Everything is done.' )

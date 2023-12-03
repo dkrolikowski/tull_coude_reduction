@@ -72,6 +72,6 @@ def build_images( file_indices, super_bias, flat_field, bad_pixel_mask, header_d
         if config['image_process']['cosmic_subtract'] and input_file[0].header['imagetyp'] == 'object':
             output_file[0].header['HISTORY'] = 'Cosmic ray subtracted'
         
-        output_file.writeto( os.path.join( config['paths']['reduction_dir'], 'object_files', 'tullcoude_{}.fits'.format( header_df['file_token'].values[i_file] ) ), overwrite = True )
+        output_file.writeto( os.path.join( config['general']['reduction_dir'], 'object_files', 'tullcoude_{}.fits'.format( header_df['file_token'].values[i_file] ) ), overwrite = True )
         
     return None

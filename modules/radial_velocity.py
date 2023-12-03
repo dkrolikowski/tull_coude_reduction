@@ -136,7 +136,7 @@ def make_rv_compiled_excel( file_indices, output_file_name, header_df, config ):
     for i_file, file_index in enumerate( file_indices ):
         
         # Read in the spectra file
-        file_name = os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[file_index] ) )
+        file_name = os.path.join( config['general']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[file_index] ) )
         file_in   = fits.open( file_name )
         
         # Make sure that the radial velocity extension exists!
@@ -251,7 +251,7 @@ def measure_radial_velocity( file_indices, header_df, config ):
         ### Data preparation -- read in, normalize, get barycentric velocity correction
         
         # Read in the spectra file
-        file_name = os.path.join( config['paths']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) )
+        file_name = os.path.join( config['general']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) )
         file_in   = fits.open( file_name )
                 
         # Continuum normalize the spectrum
@@ -275,7 +275,7 @@ def measure_radial_velocity( file_indices, header_df, config ):
         ### Saphires broadening function prep -- create ls file, make data and template structures
         
         # Read in the pre-defined orders to use file
-        orders_to_use = pd.read_csv( os.path.join( config['paths']['code_data_dir'], config['radial_velocity']['orders_to_use_file_name'] ) )
+        orders_to_use = pd.read_csv( os.path.join( config['general']['code_data_dir'], config['radial_velocity']['orders_to_use_file_name'] ) )
         
         # Make the ls file
         temp_ls_file_name = 'temp_{}.ls'.format( header_df['file_token'].values[i_file] )
@@ -285,7 +285,7 @@ def measure_radial_velocity( file_indices, header_df, config ):
         tar, tar_spec = saphires.io.read_vars( file_in['wavelength'].data, flux_cont_norm, header_df['file_token'].values[i_file], w_file = temp_ls_file_name, combine_all = False )
 
         # Make the saphires template spetrum structure. Read in the csv file from the code data directory and make into saphires structure
-        template_csv  = pd.read_csv( os.path.join( config['paths']['code_data_dir'], config['radial_velocity']['template_file_name'] ) )
+        template_csv  = pd.read_csv( os.path.join( config['general']['code_data_dir'], config['radial_velocity']['template_file_name'] ) )
         template_spec = saphires.io.read_vars( template_csv['wavelength'], template_csv['flux'], config['radial_velocity']['template_file_name'], temp = True )
 
         # Prepare the spectra to run the broadening function
@@ -323,7 +323,7 @@ def measure_radial_velocity( file_indices, header_df, config ):
             continue
 
         # Plot the result of the RV sampling/BF combination
-        plot_file_name = os.path.join( config['paths']['reduction_dir'], 'radial_velocity', 'bf_rv_result_{}.pdf'.format( header_df['file_token'].values[i_file] ) )
+        plot_file_name = os.path.join( config['general']['reduction_dir'], 'radial_velocity', 'bf_rv_result_{}.pdf'.format( header_df['file_token'].values[i_file] ) )
         plot_bootstrap_rv_result( tar, tar_spec, barycorr_vel, bootstrap_rv_samples, plot_file_name )
         
         # Calculate RV value and error
