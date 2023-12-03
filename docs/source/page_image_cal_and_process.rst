@@ -1,10 +1,6 @@
 CCD Calibration Files and Image Processing
 ==========================================
 
-.. raw:: html
-
-    <style> .purple {color:#731683;font-weight:bold} </style>
-
 .. role:: purple
 
 The first thing to be done for reducing these echelle spectra is to process the raw CCD images.

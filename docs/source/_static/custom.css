@@ -1,3 +1,15 @@
+/* Setting to make table entries wrap their text*/
 .wy-table-responsive table td, .wy-table-responsive table th {
     white-space: inherit;
+}
+
+/* Define bold color text */
+.purple {
+    color:#731683;
+    font-weight: bold;
+}
+
+.blue {
+    color:#1c6ccc;
+    font-weight: bold;
 }

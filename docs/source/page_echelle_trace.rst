@@ -1,10 +1,6 @@
 Tracing Echelle Orders
 ======================
 
-.. raw:: html
-
-    <style> .purple {color:#731683;font-weight:bold} </style>
-
 .. role:: purple
 
 Before extracting 1D spectra from the processed images, we need to define the echelle order traces. The trace defines the center of the spectral order in the cross dispersion direction across the dispersion axis, along which the 1D spectrum can be extracted. In this pipeline, we trace orders using the flat field. The order tracing functionality is hosted in the :py:meth:`trace_echelle <trace_echelle>` module.

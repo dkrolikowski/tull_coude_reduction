@@ -1,10 +1,6 @@
 Wavelength Calibration
 ======================
 
-.. raw:: html
-
-    <style> .purple {color:#731683;font-weight:bold} </style>
-
 .. role:: purple
 
 The last step of the "reduction" part of the pipeline to produce science-ready spectra is the wavelength calibration. We do this using observations of arc lamps, which are ThAr lamps in our default case with the Tull coudé spectrograph. We use a reference line list to map the pixel centroids of identified emission lines in the observed arc lamp spectra to their corresponding wavelengths in the line list. Then a polynomial is fit to produce a pixel -> wavelength solution for the entire order, and applied to every science observation.

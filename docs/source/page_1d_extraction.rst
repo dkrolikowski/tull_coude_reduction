@@ -1,10 +1,6 @@
 Extraction of 1D Spectra
 ========================
 
-.. raw:: html
-
-    <style> .purple {color:#731683;font-weight:bold} </style>
-
 .. role:: purple
 
 Now that location of the echelle orders have been found and traced, we can extract 1D spectra from the 2D spectrum image of each order. This is done by summing up the flux in the cross-dispersion slice of the order flux image at every dispersion pixel, collapsing the 2D spectrum into one dimension. The result of this step is a series of 1D spectra, flux and flux error vs. dispersion pixel, for each order that was traced in the previous step.
