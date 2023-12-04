@@ -1,9 +1,9 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup( name = 'tull_coude_reduction',
        description = 'Tull coude spectrograph reduction and analysis pipeline',
        author = 'Danny Krolikowski',
-       author_email = 'krolikowski@arizon.edu',
+       author_email = 'krolikowski@arizona.edu',
        url = 'https://github.com/krolikowski/tull_coude_reduction',
        license = 'MIT',
        classifiers = [ 'Development Status :: 3 - Alpha',
@@ -14,9 +14,11 @@ setup( name = 'tull_coude_reduction',
                        ],
        project_urls = { 'Documentation': 'https://tull-coude-reduction.readthedocs.io/en/latest/'
                        },
-       packages = [ '.', 'modules' ],
+       packages = find_packages(),
+       package_dir = { '': 'tull_coude_reduction' },
+       package_data = { 'tull_coude_reduction.data': [ '*.csv', '*.npy' ] },
        python_requires = '>=3',
-       install_requires = [ 'numpy',
+       install_requires = [ 'numpy==1.23.5',
                             'matplotlib',
                             'scipy',
                             'pandas',
@@ -28,8 +30,8 @@ setup( name = 'tull_coude_reduction',
                             'pyyaml',
                             'urllib3==1.26.15',
                             'PyQt5',
-                            'PySide2',
                             'emcee',
-                            'corner'
+                            'corner',
+                            'pydl'
                             ]
        )
