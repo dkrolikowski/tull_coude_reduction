@@ -26,6 +26,7 @@ Pipeline structure: how to run it
 
 How is the pipeline actually run? Discuss structure: there is a module file for each broad step. Within that module is a function meant to act as the main script to run that step.
 
+installation instructions :ref:`here <target_to_installation>`
 Structure:
 
 - main reduction running script that compiles all of the different steps and runs them.
@@ -173,12 +174,51 @@ Radial velocity module
 ``n_bootstrap_samples``         Number of bootstrap samples for brodening function comination to measure the radial velocity                            2500
 =============================== ======================================================================================================================= ==============================
 
+.. _target_to_installation:
+
 Installation
 ------------
 
-Not on PyPI. Clone repository and install as a development version -- still actively being developed so better that way.
+The pipeline has not yet been formally released, published on PyPI, and is not pip installable.
 
-Clone and then use pip install +e I think.
+Regardless, we  would recommend that any users install a development version of the pipeline because it is still under active development. While the pipeline does currently run in full, it is not yet thoroughly tested enough to warrant a stable v1.0 release. There is also some functionality yet to be added (see `this project <https://github.com/users/dkrolikowski/projects/1>`_ in the pipeline's GitHub repository).
+
+To install the pipeline follow these steps:
+
+We recommend creating a separate python environment to contain the pipeline dependencies that require specific versions. :blue:`Note that the pipeline was developed using Python 3.9`. You can create this with either a python virtual environment or conda. While we name the environment ``pyenv_tull_reduce`` here, feel free to replace it. If using a python virtual environment, first navigate to the place you want to put the environment directory
+
+Follow this code if using a virtual environment, after first navigating to the location you want to place the environment directory: ::
+
+	python -m venv pyenv_tull_reduce
+	source pyenv_tull_reduce/bin/activate
+	pip install --upgrade setuptools wheel pip
+
+Follow this for using conda: ::
+
+	conda env create -n pyenv_tull_reduce python=3.9
+	conda activate pyenv_tull_reduce
+	conda update pip setuptools wheel
+
+Note that we also update packages used for installation after we activate the environment.
+
+Then, navigate to the directory you would like to contain the reduction pipeline repository (for example ``~/codes/``). Here we will clone the pipeline GitHub repository and install it. The repository will contain the pipeline reduction running script, the modules, and the needed reference data files. Follow this code to clone the repository and install using pip with the editable flag to install the code in place (so that it can be modified as development continues): ::
+
+	git clone git@github.com:dkrolikowski/tull_coude_reduction.git
+	pip install -e tull_coude_reduction
+
+With that, you should have access to the reduction modules and can invoke the reduction script included in the ``tull_coude_reduction`` package.
+
+.. note::
+
+	There are a handful of excess dependencies included in the setup.py file to ensure that there are no missing recursive dependencies.
+
+	In testing, issues like this mostly cropped up with ``saphires``. For example, ``numpy`` is set to version 1.23.5 because ``saphires`` still usings numpy type alises (e.g. ``np.float``). 
+
+	The ``urllib3`` version is set to 1.26.15 due to issues when testing installation of ``barycorrpy``.
+
+.. warning::
+
+	We encountered a failure when testing an installation on the University of Arizona HPC. ``saphires`` use of PyQt5 was not valid, perhaps from an issue with using a ``qt`` backend. This will be investigate in the future and we will coordinate with the ``saphires`` package to fix any bugs there related to this. For now, just keep it in mind in case you encounter issues installing.
 
 
 
