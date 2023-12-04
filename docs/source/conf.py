@@ -2,7 +2,7 @@ import os
 import sys
 import sphinx_rtd_theme
 
-sys.path.insert(0, os.path.abspath('../../modules/'))
+sys.path.insert(0, os.path.abspath('../../tull_coude_reduction/modules/'))
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -21,10 +21,11 @@ author = 'Daniel Krolikowski'
 
 extensions = ['sphinx.ext.napoleon', 'autoapi.extension', 'sphinx_rtd_theme']
 
-autoapi_dirs = ['../../modules']
+autoapi_dirs = ['../../tull_coude_reduction/modules']
 autoapi_type = "python"
 autoapi_keep_files = True
 autoapi_add_toctree_entry = False
+autoapi_python_use_implicit_namespaces=True
 
 templates_path = ['_templates']
 exclude_patterns = []
