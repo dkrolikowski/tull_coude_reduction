@@ -188,7 +188,7 @@ def find_full_trace( flat_field_flux, order_centers, order_disp_start_index, ord
     """
     
     # Empty array to hold the full trace -- shape: number of orders found to start, ~cross-dispersion (y-axis) pixels (no overscan)
-    full_trace = np.zeros( ( order_centers.size, flat_field_flux.shape[0] ), dtype = np.int )
+    full_trace = np.zeros( ( order_centers.size, flat_field_flux.shape[0] ), dtype = int )
     
     # Set the previous trace location to be the input order centers
     prev_trace = order_centers
