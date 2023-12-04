@@ -1,34 +1,51 @@
 Pipeline Overview and Structure
 ===============================
 
+.. role:: purple
+.. role:: blue
+
 Overview of the pipeline steps
 ------------------------------
 
-The pipeline follows the general steps for reducing data from an echelle spectrograph.
-These general steps are:
+This pipeline has two main components: the "reduction" steps to produce wavelength-calibrated 1D extracted spectra and "analysis" steps to measure useful quantities from the spectra for research purposes.
 
-1. Generate a header manifest
-2. Gather flats and biases and generate calibration files by combining them. Also BPM
-3. Image process: the rest of the images bias subtract, flat field, and cosmic subtract if it says to.
-4. Trace the orders! Using the flat field
-5. Extract 1D spectra along the echelle order traces. Different methods for different types of spectra.
-6. Wavelength calibration: fit a wavelength solution and then apply to the rest of the data.
+The general steps of the reduction pipeline are:
 
-That gives you the final spectra. We then have some more "analysis" steps:
+1. Generate bias, flat field, and bad pixel mask CCD calibration files, and then image process the night's raw CCD images.
+2. Trace the location of the echelle orders.
+3. Extract 1D spectra along the echelle order traces for science observations.
+4. Measure a wavelength solution using reference lamp observations (e.g. ThAr) and calibrate all science observations.
 
-1. Continuum fit stellar spectra.
-2. Calculate radial velocities using broadening functions.
+After reduction, the following analysis steps are included:
 
-How is the pipeline actually run? Discuss structure: there is a module file for each broad step. Within that module is a function meant to act as the main script to run that step.
-Then there is a main reduction run file that wraps all these modules together and takes in a config file that defines the run.
-
-Briefly discuss the config file: it will be touched upon in each page for the modules and then in a separate page where everything is explicitly defined.
-There is a config file included in the package that is meant to be a template.
+1. Fit the continuum of stellar spectra.
+2. Measure stellar radial velocities using broadening functions.
 
 Pipeline structure: how to run it
 ---------------------------------
 
-I will put instructions on installing the package here once I get to that.
+How is the pipeline actually run? Discuss structure: there is a module file for each broad step. Within that module is a function meant to act as the main script to run that step.
+
+Structure:
+
+- main reduction running script that compiles all of the different steps and runs them.
+- The individual modules are a combination of constituent functions and a "wrapper" function that combines the constituent functions to run the step.
+- Options are governed by a config file described below.
+- Detail the directory structure
+
+There is an example reduction script include in the package called "reduce_tull_spectra.py".
+
+If running reduction with default settings on default setup, can easily run!
+
+Navigate to the directory containing the coude data. For example, a directory called "coude_data" with subdirectories containing the raw data for individual nights following a "YYYYMMDD" naming convention.
+
+Copy in the config file example provided with the package and edit the ``working_dir`` variable to by the date you want to reduce (and change any other options you may want to).
+
+Then can call the base package reduction run script from the command line:
+
+python -m tull_coude_reduction.reduce_tull_spectra config_file_name.yml
+
+And the pipeline will run!
 
 .. _target_to_config_description:
 
@@ -39,14 +56,30 @@ Below are tables defining the options in each of the main *config* file sections
 
 Each table has three columns: the *config* keyword, a description, and the default value for our base use case with the Tull coudé spectrograph for the echelle setup used by Professor Adam Kraus's group at UT Austin.
 
-**Every module's config block begins with a** ``do_step`` **flag that determines if a module is executed.**
+:blue:`Every module's config block begins with a` ``do_step`` :blue:`flag that determines if a module is executed.`
+
+General reduction run settings
+++++++++++++++++++++++++++++++
+
+*Config* entries for the top level script to run the reduction and analysis pipeline. Mostly concerning path definition, and some general flags for performing certain actions.
+
+================================= ============================================================================== ===================================================================================
+**Config Key**  				  **Description**															     **Default value**
+--------------------------------- ------------------------------------------------------------------------------ -----------------------------------------------------------------------------------
+``do_all_steps``    			  Flag that, if True, overrides all individual modules ``do_step`` flags         False
+``remove_images_at_end``    	  Flag to remove processed image files after pipeline completion                 False
+``working_dir``                   Path to the night's data directory (typically folder with date name" YYYYMMDD) '/path/to/data/YYYYMMDD/'
+``reduction_dir``                 Name of the sub-directory in ``working_dir`` to hold reduction output          'reduction/'
+``sub_dir_list``                  List of sub-directories to create in the night's reduction directory           [ 'cals', 'trace', 'object_files', 'spectrum_files', 'wavecal', 'radial_velocity' ]
+``header_info_file_name``         File name for the header information CSV file                                  'header_info.csv'
+================================= ============================================================================== ===================================================================================
 
 CCD calibration files module
 ++++++++++++++++++++++++++++
 
+*Config* entries for the :py:meth:`ccd_calibrations <ccd_calibrations>` module.
+
 ================================= =========================================================================== ==============================
-**Config Key**  				  **Description**															  **Default value**
---------------------------------- --------------------------------------------------------------------------- ------------------------------
 ``bias_image_type``    			  Header image type keyword value for the bias frames						  'zero'
 ``flat_image_type``    			  Header image type keyword value for the flat frames						  'flat'
 ``flat_object_names_to_discard``  Header object keyword values to exclude from the creation of the flat field [ 'FF integration time test' ]
@@ -57,8 +90,9 @@ CCD calibration files module
 Image processing module
 +++++++++++++++++++++++
 
+*Config* entries for the :py:meth:`image_processing <image_processing>` module.
+
 ================================= ==================================================================== ==============================
---------------------------------- -------------------------------------------------------------------- ------------------------------
 ``arc_lamp_image_type``    	      Header image type keyword value for arc lamp spectra                 'comp'
 ``valid_arc_lamp_object_names``   Header object keyword values to include for arc lamp frames (a list) [ 'thar', 'a' ]
 ``invalid_science_object_names``  Header object keyword values to exclude as science frames (a list)   [ 'test' ]
@@ -69,8 +103,9 @@ Image processing module
 Order tracing module
 ++++++++++++++++++++
 
+*Config* entries for the :py:meth:`trace_echelle <trace_echelle>` module.
+
 ============================== ======================================================================================================================= ==============================
------------------------------- ----------------------------------------------------------------------------------------------------------------------- ------------------------------
 ``order_xdisp_trace_width``    Cross dispersion pixel height of the slit                                                                               20
 ``order_start_index``          The index at which to find the starting location of the order traces                                                    -33
 ``order_center_method``        Algorithm to use for finding the initial locations of the order traces. Must be 'peak_find' or 'gradient_threshold'     'peak_find'
@@ -82,8 +117,9 @@ Order tracing module
 Spectral extraction module
 ++++++++++++++++++++++++++
 
+*Config* entries for the :py:meth:`extract_spectrum <extract_spectrum>` module.
+
 =============================== ======================================================================================================================= ==============================
-------------------------------- ----------------------------------------------------------------------------------------------------------------------- ------------------------------
 ``reverse_traced_orders``       Flag for whether or not the order direction needs to be reversed (to match increasing wavelength order)                 True
 ``order_xdisp_width_extract``   Cross dispersion pixel width of an order for extraction                                                                 -33
 ``science_extract_type``        Extraction algorithm to use for on-sky science observations. Must be 'optimal_extractin' or 'sum_extraction'            'optimal_extraction'
@@ -95,8 +131,9 @@ Spectral extraction module
 Wavelength calibration module
 +++++++++++++++++++++++++++++
 
+*Config* entries for the :py:meth:`wavelength_solve_and_calibrate <wavelength_solve_and_calibrate>` module.
+
 ================================== ======================================================================================================================= ==============================
----------------------------------- ----------------------------------------------------------------------------------------------------------------------- ------------------------------
 ``min_arc_exp_time``               Minimum exposure time (in seconds) for an arc lamp observation to be included in wavelength calibration                 30
 ``use_prelim_sol_order_offset``    Flag for whether or not an order-index offset between observation and initial wavelength solution should be found       True
 ``peak_threshold_mad_method``      Method to use for estimating the arc lamp flux noise for peak finding. Must be 'full_spectrum' or 'chunk_spectrum'      'chunk_spectrum'
@@ -114,8 +151,9 @@ Wavelength calibration module
 Continuum fitting module
 ++++++++++++++++++++++++
 
+*Config* entries for the :py:meth:`continuum_fit <continuum_fit>` module.
+
 =============================== ======================================================================================================================= ==============================
-------------------------------- ----------------------------------------------------------------------------------------------------------------------- ------------------------------
 ``lower_sigma_reject``          Number of standard deviations to reject flux values below the continuum fit                                             2
 ``upper_sigma_reject``          Number of standard deviations to reject flux values above the continuum fit                                             5
 ``num_spectrum_chunks``         Number of chunks to break the spectrum into -- sets the number of spline knots                                          6
@@ -125,8 +163,9 @@ Continuum fitting module
 Radial velocity module
 ++++++++++++++++++++++
 
+*Config* entries for the :py:meth:`radial_velocity <radial_velocity>` module.
+
 =============================== ======================================================================================================================= ==============================
-------------------------------- ----------------------------------------------------------------------------------------------------------------------- ------------------------------
 ``orders_to_use_file_name``     File name of the pre-defined orders to use for the broadening function computation                                      'good_orders_tull_coude.csv'
 ``template_file_name``          File name of the spectrum template to use for broadening function computation                                           'phoenix_t5500_g4.5_m0.0.csv'
 ``bf_velocity_span``            Velocity span to compute the broadening function over (in km/s)                                                         300
@@ -134,8 +173,12 @@ Radial velocity module
 ``n_bootstrap_samples``         Number of bootstrap samples for brodening function comination to measure the radial velocity                            2500
 =============================== ======================================================================================================================= ==============================
 
+Installation
+------------
 
+Not on PyPI. Clone repository and install as a development version -- still actively being developed so better that way.
 
+Clone and then use pip install +e I think.
 
 
 
