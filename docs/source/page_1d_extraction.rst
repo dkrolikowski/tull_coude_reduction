@@ -82,6 +82,8 @@ We currently allow for two background subtraction options for sum extraction, wh
 
 Sum extraction without background subtraction is the default for arc lamp spectra.
 
+The sum extraction algorithm is in the :py:func:`sum_extraction <modules.extract_spectrum.sum_extraction>` function
+
 .. note::
 
 	The benefits of optimal extraction are most clear for faint targets with relatively low signal to noise. While sum extraction is very quick, the computation cost of this optimal extraction algorithm isn't significant enough to warrant turning it off for brighter science targets. Therefore, we recommend keeping optimal extraction as the default for all on-sky observation extraction.
