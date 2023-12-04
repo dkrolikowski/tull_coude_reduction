@@ -5,24 +5,24 @@ Extraction of 1D Spectra
 
 Now that location of the echelle orders have been found and traced, we can extract 1D spectra from the 2D spectrum image of each order. This is done by summing up the flux in the cross-dispersion slice of the order flux image at every dispersion pixel, collapsing the 2D spectrum into one dimension. The result of this step is a series of 1D spectra, flux and flux error vs. dispersion pixel, for each order that was traced in the previous step.
 
-The :py:meth:`extract_spectrum <extract_spectrum>` module contains the functions for extracting the spectra. The options for this step are defined in the ``extraction`` section of the main *config* YAML file, which is described in full :ref:`here <target_to_config_description>`.
+The :py:meth:`extract_spectrum <modules.extract_spectrum>` module contains the functions for extracting the spectra. The options for this step are defined in the ``extraction`` section of the main *config* YAML file, which is described in full :ref:`here <target_to_config_description>`.
 
 Extraction algorithms
 ---------------------
 
 Two extraction algorithms are current included for use in the pipeline: sum extraction and optimal extraction. The pipeline is set up so that different extraction algorithms can be used for different types of science frames. In our default case, this differentiates arc lamp observations (emission line spectra) and on-sky science observations (stellar absorption spectra).
 
-The first step, regardless of extraction method, is to cut the flux and error 2D image blocks for each order from the full processed detector image. We do this with the :py:func:`get_order_image_block <extract_spectrum.get_order_image_block>` function. For each order the function goes pixel by pixel in the dispersion direction, rounds the fit trace value at that dispersion pixel, and defines the cross-dispersion slice of the 2D spectrum with a *config* defined cross-dispersion order pixel width (default: 16 pixels).
+The first step, regardless of extraction method, is to cut the flux and error 2D image blocks for each order from the full processed detector image. We do this with the :py:func:`get_order_image_block <modules.extract_spectrum.get_order_image_block>` function. For each order the function goes pixel by pixel in the dispersion direction, rounds the fit trace value at that dispersion pixel, and defines the cross-dispersion slice of the 2D spectrum with a *config* defined cross-dispersion order pixel width (default: 16 pixels).
 
 With the order flux and error image blocks, we then can go pixel by pixel and collapse the 2D spectrum into 1D spectra. Below we describe the available extraction algorithms for this step.
 
 Optimal extraction
 ++++++++++++++++++
 
-The function :py:func:`optimal_extraction <extract_spectrum.optimal_extraction>` is an implementation of the Horne 1986 optimal extraction algorithm.
+The function :py:func:`optimal_extraction <modules.extract_spectrum.optimal_extraction>` is an implementation of the Horne 1986 optimal extraction algorithm.
 We will not discuss the details behind the algorithm, only the broad overview of steps taken and the specifics/differences of our implementation. See the original `Horne 1986 <https://ui.adsabs.harvard.edu/abs/1986PASP...98..609H/abstract>`_ paper for the details of optimal extraction.
 
-The general idea is to assume a spatial profile of the flux in the cross-dispersion direction, fit each cross-dispersion slice of the 2D order flux image block, and use the normalized spatial profile to calculate the summed flux in each dispersion pixel. Here we assume a Gaussian spatial profile, which is defined in the :py:func:`gaussian_1d <reduction_utils.gaussian_1d>` function. 
+The general idea is to assume a spatial profile of the flux in the cross-dispersion direction, fit each cross-dispersion slice of the 2D order flux image block, and use the normalized spatial profile to calculate the summed flux in each dispersion pixel. Here we assume a Gaussian spatial profile, which is defined in the :py:func:`gaussian_1d <modules.reduction_utils.gaussian_1d>` function. 
 
 We loop through each dispersion pixel and fit the cross-dispersion slice of the order flux image block with a Gaussian. There are two currently available options for setting the background flux value, which is set in the *config* file: ``fit`` or ``fixed``. See the subsection below for more information about the background subtraction options, but each of the options available provides an offset flux level for the flux slice Gaussian. The Gaussian fit is performed with ``scipy.optimize.curve_fit``, and we include the cross-dispersion slice of the order error image block in the fitting routine. We exclude ``nans`` (bad pixels) from the fit, and if there are fewer than 4 non-``nan`` values to fit we skip the slice and the extracted spectrum is set to ``nan``. 
 
@@ -38,7 +38,7 @@ We then turn the Gaussian fit into a spatial profile by subtracting the backgrou
 
 To improve the signal of the extracted spectrum, we can combine the spatial profile parameter information from all dispersion pixels of an order and enforce smoothness across the order. This also allows us to define an accurate spatial profile at dispersion pixels with poor spatial profile fits (or significant outlier flux values along their cross-dispersion slices, for example).
 
-To do this, we fit the spatial profile parameters as a function of dispersion pixel with a polynomial, with sigma rejection iteration. The fitting routine is in the :py:func:`polynomial_fit_sigma_reject <reduction_utils.polynomial_fit_sigma_reject>` function. We use a 3rd degree polynomial with 1 iteration of 5-:math:`\sigma` rejection. We fit the spatial profile Gaussian amplitude and standard deviation parameters, and the background value if the *config* option is ``fit``. The fitting function also takes as input valid ranges of values for each parameter to exclude extreme/unphysical outliers from the fitting (e.g. amplitude values outside of the range 0 to 1).
+To do this, we fit the spatial profile parameters as a function of dispersion pixel with a polynomial, with sigma rejection iteration. The fitting routine is in the :py:func:`polynomial_fit_sigma_reject <modules.reduction_utils.polynomial_fit_sigma_reject>` function. We use a 3rd degree polynomial with 1 iteration of 5-:math:`\sigma` rejection. We fit the spatial profile Gaussian amplitude and standard deviation parameters, and the background value if the *config* option is ``fit``. The fitting function also takes as input valid ranges of values for each parameter to exclude extreme/unphysical outliers from the fitting (e.g. amplitude values outside of the range 0 to 1).
 
 Here are examples of full-order fits to the spatial profile Gaussian amplitude and standard deviation paramters for one order of an observation of a star:
 
@@ -69,7 +69,7 @@ We have two options for background subtraction with optimal extraction, set in t
 
 For ``fit``, the background flux value for a cross-dispersion slice is left free to be fit as the Gaussian's offset. 
 
-For ``fixed``, we fit polynomials to dispersion slices at the top and bottom of the order flux image block to estimate the background values. We use :py:func:`polynomial_fit_sigma_reject <reduction_utils.polynomial_fit_sigma_reject>` to fit 2nd order polynomials with 1 round of 5-:math:`\sigma` rejection (to exclude outlier flux values, such as sky emission lines). Then, the background value for a cross-dispersion slice is taken to be the average value of these two background polynomial fits at that dispersion pixel.
+For ``fixed``, we fit polynomials to dispersion slices at the top and bottom of the order flux image block to estimate the background values. We use :py:func:`polynomial_fit_sigma_reject <modules.reduction_utils.polynomial_fit_sigma_reject>` to fit 2nd order polynomials with 1 round of 5-:math:`\sigma` rejection (to exclude outlier flux values, such as sky emission lines). Then, the background value for a cross-dispersion slice is taken to be the average value of these two background polynomial fits at that dispersion pixel.
 
 The default is to use the ``fixed`` background subtraction. This prevents spurious extracted spectrum pixels where there are sky emission lines, which fill the slit and have their background values fit far too high. In the future, this ``fixed`` background subtraction will essentially occur earlier in the pipeline, with background/scattered light subtraction in the image processing step.
 

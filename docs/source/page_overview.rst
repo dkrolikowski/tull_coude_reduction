@@ -77,7 +77,7 @@ General reduction run settings
 CCD calibration files module
 ++++++++++++++++++++++++++++
 
-*Config* entries for the :py:meth:`ccd_calibrations <ccd_calibrations>` module.
+*Config* entries for the :py:meth:`ccd_calibrations <modules.ccd_calibrations>` module.
 
 ================================= =========================================================================== ==============================
 ``bias_image_type``    			  Header image type keyword value for the bias frames						  'zero'
@@ -90,7 +90,7 @@ CCD calibration files module
 Image processing module
 +++++++++++++++++++++++
 
-*Config* entries for the :py:meth:`image_processing <image_processing>` module.
+*Config* entries for the :py:meth:`image_processing <modules.image_processing>` module.
 
 ================================= ==================================================================== ==============================
 ``arc_lamp_image_type``    	      Header image type keyword value for arc lamp spectra                 'comp'
@@ -103,7 +103,7 @@ Image processing module
 Order tracing module
 ++++++++++++++++++++
 
-*Config* entries for the :py:meth:`trace_echelle <trace_echelle>` module.
+*Config* entries for the :py:meth:`trace_echelle <modules.trace_echelle>` module.
 
 ============================== ======================================================================================================================= ==============================
 ``order_xdisp_trace_width``    Cross dispersion pixel height of the slit                                                                               20
@@ -117,7 +117,7 @@ Order tracing module
 Spectral extraction module
 ++++++++++++++++++++++++++
 
-*Config* entries for the :py:meth:`extract_spectrum <extract_spectrum>` module.
+*Config* entries for the :py:meth:`extract_spectrum <modules.extract_spectrum>` module.
 
 =============================== ======================================================================================================================= ==============================
 ``reverse_traced_orders``       Flag for whether or not the order direction needs to be reversed (to match increasing wavelength order)                 True
@@ -131,7 +131,7 @@ Spectral extraction module
 Wavelength calibration module
 +++++++++++++++++++++++++++++
 
-*Config* entries for the :py:meth:`wavelength_solve_and_calibrate <wavelength_solve_and_calibrate>` module.
+*Config* entries for the :py:meth:`wavelength_solve_and_calibrate <modules.wavelength_solve_and_calibrate>` module.
 
 ================================== ======================================================================================================================= ==============================
 ``min_arc_exp_time``               Minimum exposure time (in seconds) for an arc lamp observation to be included in wavelength calibration                 30
@@ -151,7 +151,7 @@ Wavelength calibration module
 Continuum fitting module
 ++++++++++++++++++++++++
 
-*Config* entries for the :py:meth:`continuum_fit <continuum_fit>` module.
+*Config* entries for the :py:meth:`continuum_fit <modules.continuum_fit>` module.
 
 =============================== ======================================================================================================================= ==============================
 ``lower_sigma_reject``          Number of standard deviations to reject flux values below the continuum fit                                             2
@@ -163,7 +163,7 @@ Continuum fitting module
 Radial velocity module
 ++++++++++++++++++++++
 
-*Config* entries for the :py:meth:`radial_velocity <radial_velocity>` module.
+*Config* entries for the :py:meth:`radial_velocity <modules.radial_velocity>` module.
 
 =============================== ======================================================================================================================= ==============================
 ``orders_to_use_file_name``     File name of the pre-defined orders to use for the broadening function computation                                      'good_orders_tull_coude.csv'

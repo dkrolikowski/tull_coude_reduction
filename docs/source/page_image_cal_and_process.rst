@@ -12,8 +12,8 @@ Once these calibration files are generated, we can then apply them to the rest o
 CCD Calibration Files
 ---------------------
 
-The first step is to generate the bias and flat field calibration files. The functions for these steps are hosted in the :py:meth:`ccd_calibrations <ccd_calibrations>` module.
-There are individual functions to generate each of the necessary calibration FITS files, and a "wrapper" function (:py:func:`build_calibrations <ccd_calibrations.build_calibrations>`) that is called in the main reduction script to run this entire step.
+The first step is to generate the bias and flat field calibration files. The functions for these steps are hosted in the :py:meth:`ccd_calibrations <modules.ccd_calibrations>` module.
+There are individual functions to generate each of the necessary calibration FITS files, and a "wrapper" function (:py:func:`build_calibrations <modules.ccd_calibrations.build_calibrations>`) that is called in the main reduction script to run this entire step.
 
 The options for this step in the reduction are defined in the ``calibration`` section of the main *config* YAML file, which is described in full :ref:`here <target_to_config_description>`.
 
@@ -46,9 +46,9 @@ The primary extension includes a few header keywords with information about the 
 ``HISTORY`` multiple entries on what is done in these steps, and when they were executed.
 =========== =============================================================================================
 
-These steps for generating the super bias calibration file are in the :py:func:`build_super_bias <ccd_calibrations.build_super_bias>` function.
+These steps for generating the super bias calibration file are in the :py:func:`build_super_bias <modules.ccd_calibrations.build_super_bias>` function.
 
-:purple:`Diagnostic plot:` An image of the super bias in log scale with the median value written to the title is output in the ``cals`` subdirectory. It is generated with :py:func:`cal_image_2d_plot <ccd_calibrations.cal_image_2d_plot>`.
+:purple:`Diagnostic plot:` An image of the super bias in log scale with the median value written to the title is output in the ``cals`` subdirectory. It is generated with :py:func:`cal_image_2d_plot <modules.ccd_calibrations.cal_image_2d_plot>`.
 
 Combining the flat lamp frames
 ++++++++++++++++++++++++++++++
@@ -80,9 +80,9 @@ The primary extension includes a few header keywords with information about the 
 ``HISTORY`` multiple entries on what is done in these steps, and when they were executed.
 =========== =============================================================================================
 
-These steps for generating the flat field calibration file are in the :py:func:`build_flat_field <ccd_calibrations.build_flat_field>` function.
+These steps for generating the flat field calibration file are in the :py:func:`build_flat_field <modules.ccd_calibrations.build_flat_field>` function.
 
-:purple:`Diagnostic plot:` An image of the flat field in log scale is output in the ``cals`` subdirectory. It is generated with :py:func:`cal_image_2d_plot <ccd_calibrations.cal_image_2d_plot>`.
+:purple:`Diagnostic plot:` An image of the flat field in log scale is output in the ``cals`` subdirectory. It is generated with :py:func:`cal_image_2d_plot <modules.ccd_calibrations.cal_image_2d_plot>`.
 
 Creating a bad pixel mask
 +++++++++++++++++++++++++
@@ -105,14 +105,14 @@ Bad pixel mask FITS file structure
 
 The bad pixel mask is saved as an image of 0s and 1s, where 0s denote the bad pixels. It has the same shape as the detector images. The bad pixel mask is included as the primary extension's data. There are a couple of ``HISTORY`` entries added with the bias and flat field thresholds for defining bad pixels.
 
-These steps for generating the bad pixel mask file are in the :py:func:`make_bad_pixel_mask <ccd_calibrations.make_bad_pixel_mask>` function.
+These steps for generating the bad pixel mask file are in the :py:func:`make_bad_pixel_mask <modules.ccd_calibrations.make_bad_pixel_mask>` function.
 
-:purple:`Diagnostic plot:` An image of the super bias with the bad pixels overplotted as points is output in the ``cals`` subdirectory. It is generated with :py:func:`cal_image_2d_plot <ccd_calibrations.cal_image_2d_plot>`. 
+:purple:`Diagnostic plot:` An image of the super bias with the bad pixels overplotted as points is output in the ``cals`` subdirectory. It is generated with :py:func:`cal_image_2d_plot <modules.ccd_calibrations.cal_image_2d_plot>`. 
 
 CCD Image Processing
 --------------------
 
-Now that the calibration files have been generated, we can process the rest of the science images from the night of observations. We need to bias correct and flat field each of the science images (including arc lamp and on-sky observations), and also remove cosmic ray contamination from on-sky observations. These steps are included in the :py:meth:`image_processing <image_processing>` module, and options are defined in the ``image_proess`` section of the main *config* YAML file, which is described in full :ref:`here <target_to_config_description>`
+Now that the calibration files have been generated, we can process the rest of the science images from the night of observations. We need to bias correct and flat field each of the science images (including arc lamp and on-sky observations), and also remove cosmic ray contamination from on-sky observations. These steps are included in the :py:meth:`image_processing <modules.image_processing>` module, and options are defined in the ``image_proess`` section of the main *config* YAML file, which is described in full :ref:`here <target_to_config_description>`
 
 For on-sky observations, we first remove cosmic ray contamination using the `AstroSCRAPPY <https://astroscrappy.readthedocs.io/en/latest/index.html>`_ package. This package is based on the L.A.Cosmic algorithm -- see the documentation for more information. In the ``astroscrappy.detect_cosmics`` routine we mostly use the default parameters except for ``sigclip`` which is set to 5 and the number of iterations which is set in the *config* file. There is also a *config* option to skip cosmic ray subtraction altogether.
 
@@ -144,11 +144,11 @@ The file has two extensions:
 
 There are also ``HISTORY`` entries added nothing which steps are done (bias subtraction, flat fielding, cosmic ray subtraction) and when they were performed.
 
-All of the above steps are executed with the :py:func:`build_images <image_processing.build_images>` function.
+All of the above steps are executed with the :py:func:`build_images <modules.image_processing.build_images>` function.
 
 .. note::
 
-	The image processing step is not particularly modular: each of the steps is written directly into the "wrapper" function in the :py:meth:`image_processing <image_processing>` module.
+	The image processing step is not particularly modular: each of the steps is written directly into the "wrapper" function in the :py:meth:`image_processing <modules.image_processing>` module.
 
 	This is from the relatively simple nature of the current image processing (for example, the lack of a scattered light subtraction). This will be an active area of development in the future, and some of these steps may be replaced with functionality from the `CCDPROC package <https://ccdproc.readthedocs.io/en/latest/>`_ for uniformity with community standards.
 

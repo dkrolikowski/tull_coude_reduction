@@ -3,7 +3,7 @@ Tracing Echelle Orders
 
 .. role:: purple
 
-Before extracting 1D spectra from the processed images, we need to define the echelle order traces. The trace defines the center of the spectral order in the cross dispersion direction across the dispersion axis, along which the 1D spectrum can be extracted. In this pipeline, we trace orders using the flat field. The order tracing functionality is hosted in the :py:meth:`trace_echelle <trace_echelle>` module.
+Before extracting 1D spectra from the processed images, we need to define the echelle order traces. The trace defines the center of the spectral order in the cross dispersion direction across the dispersion axis, along which the 1D spectrum can be extracted. In this pipeline, we trace orders using the flat field. The order tracing functionality is hosted in the :py:meth:`trace_echelle <modules.trace_echelle>` module.
 
 The options for this step in the reduction are defined in the ``trace`` section of the main *config* YAML file, which is described in full :ref:`here <target_to_config_description>`.
 
@@ -42,7 +42,7 @@ The right panel shows the flat field values along the cross-dispersion slice at 
 
 To find the order peaks, we use the gradient of the slice of the flat field. At the sharp order edge, the gradient of the flat field peaks sharply as the order edge rises (and similarly at the other edge of the order the gradient negatively peaks as the order decreases). Thus, we can look for the positive peaks of the gradient to denote the start of an order, and then find the center of each identified order.
 
-There are two different algorithms implemented to find the flat field slice gradient peaks in the :py:func:`find_order_centers_along_slice <trace_echelle.find_order_centers_along_slice>` function:
+There are two different algorithms implemented to find the flat field slice gradient peaks in the :py:func:`find_order_centers_along_slice <modules.trace_echelle.find_order_centers_along_slice>` function:
 
 1. Direct thresholding based on an estimate of the noise of the flat slice's gradient to identify peaks above a certain level. The noise is estimated using the median absolute deviation of the gradient of the flat slice at the bottom of the detector, where the response is low and no orders are present above the noise.
 2. Using the ``scipy.signal`` ``find_peaks`` algorithm (`documentation here <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.find_peaks.html>`_) with constraints placed on the width of the peaks. The range of allowable peak widths is hard coded into the function and was determined by directly inspecting a flat field from the Tull coudé spectrograph. We also set any values of the flat slice gradient below its median to the median, as the ``find_peaks`` algorithm has issues when the negative gradient peaks are present (which is okay because we only need the starting edge of the orders)
@@ -51,27 +51,27 @@ The algorithm that is used is defined in the *config* file.
 
 The pipeline default is to use the ``scipy`` function. This is more reliable than the direct thresholding, which is hard to tune for the varying flat field response resulting in significantly different gradient peak values for each order. The ``scipy`` function does require hard coding of the peak width constraint, although in the future that can be changed to a *config* file option. The ``scipy`` function much more reliably finds the flat slice gradient peaks, and also does a better job of finding more orders towards the bottom of the detector where the signal signficantly degrades. 
 
-**Important note**: The flat slice gradient peak finding identifies what is roughly the starting edge of an order. However, we want to identify the centers of the orders. In the *config* file we define the cross-dispersion pixel height of the slit, and add half of that value to the peak finding output to translate them to order centers. We then re-center the order locations by identifying the edges of the order flat slice as being where the values are 70% of the maximum, and then adopt the halfway point as the order center. This re-centering is done with the :py:func:`recenter_order_trace <trace_echelle.recenter_order_trace>` function.
+**Important note**: The flat slice gradient peak finding identifies what is roughly the starting edge of an order. However, we want to identify the centers of the orders. In the *config* file we define the cross-dispersion pixel height of the slit, and add half of that value to the peak finding output to translate them to order centers. We then re-center the order locations by identifying the edges of the order flat slice as being where the values are 70% of the maximum, and then adopt the halfway point as the order center. This re-centering is done with the :py:func:`recenter_order_trace <modules.trace_echelle.recenter_order_trace>` function.
 
 :purple:`Diagnostic plot:` a plot like the above figure's right panel showing the flat field slice and the centers of the identified orders is output in the ``trace`` subdirectory.
 
 Tracing the order across the detector
 +++++++++++++++++++++++++++++++++++++
 
-With the orders identified and their centers at the edge of the detector measured, we can trace the centers of each order across the full detector to get the full traces. This is done with the :py:func:`find_full_trace <trace_echelle.find_full_trace>` function.
+With the orders identified and their centers at the edge of the detector measured, we can trace the centers of each order across the full detector to get the full traces. This is done with the :py:func:`find_full_trace <modules.trace_echelle.find_full_trace>` function.
 
 We start with the initial centers found, then move a pixel to the left and re-center the trace as is done at the end of the initial trace location finding step. We iterate this for every dispersion pixel and for each order that is identified. This results in an array of trace centers with shape (number of orders identified, number of dispersion pixels). For the Tull coudé spectrograph the latter is 2048 pixels.
 
 It is possible for some orders to be poorly traced. This is particularly true towards the bottom of the detector where signal significantly degrades. There is also an artifact on the detector, called the "picket fence", that imprints an emission like fringe over some orders. This "picket fence" fringing can cause those orders' traces to be poor. This is fixed in the fitting of the trace.
 
-:purple:`Diagnostic plot:` a plot showing the flat field with the full found trace overplotted as points is output in the ``trace`` subdirectory. It is a multi-page figure, with one page showing the full detector, and two pages to zoom in on each the top and bottom half to better see the trace. Generated with the :py:func:`plot_trace_on_image <trace_echelle.plot_trace_on_image>` function.
+:purple:`Diagnostic plot:` a plot showing the flat field with the full found trace overplotted as points is output in the ``trace`` subdirectory. It is a multi-page figure, with one page showing the full detector, and two pages to zoom in on each the top and bottom half to better see the trace. Generated with the :py:func:`plot_trace_on_image <modules.trace_echelle.plot_trace_on_image>` function.
 
 Fitting the trace
 -----------------
 
 We then fit the full found trace across the detector for each order with a polynomial to enfore smoothness. For each order we fit the cross-dispersion pixel center vs. dispersion pixel. The degree of the polynomial is defined in the *config* file, and our default is 2nd-order. There is also an option in the *config* file to set the starting dispersion pixel to fit the polynomial to. This was introduced because sometimes the trace at the left edge of the detector wanders off due to low signal and biases the fit, despite the rest of the trace being identified well. For our default use, this is set to exclude the first fourth of the order.
 
-:purple:`Diagnostic plot:` a similar plot to that for the full trace finding is output to the ``trace`` subdirectory, with the polynomial fit to each order's trace overplotted. Generated with the :py:func:`plot_trace_on_image <trace_echelle.plot_trace_on_image>` function.
+:purple:`Diagnostic plot:` a similar plot to that for the full trace finding is output to the ``trace`` subdirectory, with the polynomial fit to each order's trace overplotted. Generated with the :py:func:`plot_trace_on_image <modules.trace_echelle.plot_trace_on_image>` function.
 
 Vetting quality of order trace fits
 +++++++++++++++++++++++++++++++++++
@@ -86,7 +86,7 @@ Here is an example showing a fit to the 0th order coefficient (intercept) of the
 	:width: 90%
 	:alt: Example hyper-fit to the 0th order coefficient of the trace fits.
 
-The initial fitting of the trace and subsequent vetting of the polynomial fits is done with the :py:func:`fit_full_trace <trace_echelle.fit_full_trace>` function.
+The initial fitting of the trace and subsequent vetting of the polynomial fits is done with the :py:func:`fit_full_trace <modules.trace_echelle.fit_full_trace>` function.
 
 :purple:`Diagnostic plot:` a multi-page plot showing a similar figure as above for each coefficient on its own page is output in the ``trace`` subdirectory.
 
@@ -105,7 +105,7 @@ Here is an example plot showing a zoom-in of the final adopted fit trace plotted
 
 The pink points are the data-found trace points and the lines are the polynomial fits to them. The red solid lines denote orders that have good trace fits and the dashed teal lines denote bad orders whose trace fits have been replaced with coefficients from the "hyper-fit" to the coefficients vs. order. The bad order near the top of the image, a result of the "picket fence", highlights how the vetting of the trace fits is necessary to provide a good order trace.
 
-:purple:`Diagnostic plot:` a plot similar to the above figure -- showing the trace data, fits, and flat field -- is output to the ``trace`` subdirectory, but with multiple pages like the diagnostic plot for the initial found and fit traces to show the full detector and zoom-ins of the top and bottom half. Generated with the :py:func:`plot_trace_on_image <trace_echelle.plot_trace_on_image>` function.
+:purple:`Diagnostic plot:` a plot similar to the above figure -- showing the trace data, fits, and flat field -- is output to the ``trace`` subdirectory, but with multiple pages like the diagnostic plot for the initial found and fit traces to show the full detector and zoom-ins of the top and bottom half. Generated with the :py:func:`plot_trace_on_image <modules.trace_echelle.plot_trace_on_image>` function.
 
 Trace FITS file structure
 -------------------------

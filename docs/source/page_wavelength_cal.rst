@@ -5,7 +5,7 @@ Wavelength Calibration
 
 The last step of the "reduction" part of the pipeline to produce science-ready spectra is the wavelength calibration. We do this using observations of arc lamps, which are ThAr lamps in our default case with the Tull coudé spectrograph. We use a reference line list to map the pixel centroids of identified emission lines in the observed arc lamp spectra to their corresponding wavelengths in the line list. Then a polynomial is fit to produce a pixel -> wavelength solution for the entire order, and applied to every science observation.
 
-The :py:meth:`wavelength_solve_and_calibrate <wavelength_solve_and_calibrate>` module contains the functions for wavelength calibration. The options for this step are defined in the ``wavecal`` section of the main *config* YAML file, which is described in full :ref:`here <target_to_config_description>`.
+The :py:meth:`wavelength_solve_and_calibrate <modules.wavelength_solve_and_calibrate>` module contains the functions for wavelength calibration. The options for this step are defined in the ``wavecal`` section of the main *config* YAML file, which is described in full :ref:`here <target_to_config_description>`.
 
 .. warning::
 
@@ -20,7 +20,7 @@ The :py:meth:`wavelength_solve_and_calibrate <wavelength_solve_and_calibrate>` m
 Wavelength solution from arc lamps
 ----------------------------------
 
-The first part of wavelength calibration is to measure a wavelength solution mapping pixel to wavelength using a reference source -- in this case an arc lamp spectrum. This step is run with the :py:func:`wavelength_solution <wavelength_solve_and_calibrate.wavelength_solution>` function.
+The first part of wavelength calibration is to measure a wavelength solution mapping pixel to wavelength using a reference source -- in this case an arc lamp spectrum. This step is run with the :py:func:`wavelength_solution <modules.wavelength_solve_and_calibrate.wavelength_solution>` function.
 
 Reference files
 +++++++++++++++
@@ -41,7 +41,7 @@ With the arc lamp observations chosen, we can go frame by frame and derive a wav
 Initial wavelength solution order offset
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The pipeline has the option, set in the *config*, to determine if there is an order-index offset between the initial wavelength solution guess and the night's observations. One reason this would be needed is if the initial solution has more orders than is extracted in the pipeline -- this is true for the default setup, which had a initial solution created with order padding. The offset resets the 0th order index of the initial solution. Thus, it is not allowed to be negative or call for an order beyond the size of the initial solution. This offset is determined with the :py:func:`order_offset_with_wave_sol_guess <wavelength_solve_and_calibrate.order_offset_with_wave_sol_guess>` function.
+The pipeline has the option, set in the *config*, to determine if there is an order-index offset between the initial wavelength solution guess and the night's observations. One reason this would be needed is if the initial solution has more orders than is extracted in the pipeline -- this is true for the default setup, which had a initial solution created with order padding. The offset resets the 0th order index of the initial solution. Thus, it is not allowed to be negative or call for an order beyond the size of the initial solution. This offset is determined with the :py:func:`order_offset_with_wave_sol_guess <modules.wavelength_solve_and_calibrate.order_offset_with_wave_sol_guess>` function.
 
 To measure the offset, we take an order of the observed arc lamp spectrum and assign it wavelength solutions from the initial guess with a range of offsets from its order index. We calculate the residual between the observed spectrum and the reference Photron ThAr spectrum (both median-normalized) and adopt the order offset with the minimum residual. This is repeated for multiple orders and the most common order offset is used moving forward (if there are multiple calculated). By using multiple orders, we reduce the effect of low signal.
 
@@ -52,14 +52,14 @@ Identifying emission lines
 
 With the order offset for the initial solution determined, we can now wavelength calibrate the arc lamp spectrum. To do this, we need to go order by order and identify emission lines that will be matched to the reference line list to map pixel to wavelength.
 
-The function :py:func:`find_arc_lamp_line_pixel_centers <wavelength_solve_and_calibrate.find_arc_lamp_line_pixel_centers>` takes in an order of the extracted spectrum and finds emission lines as peaks. We normalize the extracted spectrum by its median to make it easier to determine which peaks are significant. 
+The function :py:func:`find_arc_lamp_line_pixel_centers <modules.wavelength_solve_and_calibrate.find_arc_lamp_line_pixel_centers>` takes in an order of the extracted spectrum and finds emission lines as peaks. We normalize the extracted spectrum by its median to make it easier to determine which peaks are significant. 
 Similar to the trace finding, we use the ``scipy.signal`` ``find_peaks`` algorithm to identify emission lines (`documentation here <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.find_peaks.html>`_).
 
 Three different constraints in the ``find_peaks`` algorithm are used to find the peaks: distance, width, and prominence:
 
 - **Distance**: This defines the minimum separation between consecutive peaks in pixels and is set in the *config* file. This ensures that blended lines are not included in the wavelength calibration.
 - **Width**: This sets the limits on the pixel width of the peaks and is set in the *config* file. An upper constraint on the width also helps to exclude blended lines, and the lower constraint helps to reduce the number of oxide lines in a contaminated ThAr lamp that are included in the peak list.
-- **Prominence**: This sets the minimum prominence (a signal-to-noise) for a peak to be included. By normalizing the spectrum by the median, this is essentially the height of the line. We estimate the noise of the spectrum using the median absolute deviation of the flux, and set a number of standard deviations above that noise in the *config* as the minimum prominence. We use the :py:func:`get_flux_mad_from_spectral_chunks <wavelength_solve_and_calibrate.get_flux_mad_from_spectral_chunks>` function to estimate the order's noise using chunks of the spectrum to reduce the influence of concentrated emission lines (e.g. oxide bands).
+- **Prominence**: This sets the minimum prominence (a signal-to-noise) for a peak to be included. By normalizing the spectrum by the median, this is essentially the height of the line. We estimate the noise of the spectrum using the median absolute deviation of the flux, and set a number of standard deviations above that noise in the *config* as the minimum prominence. We use the :py:func:`get_flux_mad_from_spectral_chunks <modules.wavelength_solve_and_calibrate.get_flux_mad_from_spectral_chunks>` function to estimate the order's noise using chunks of the spectrum to reduce the influence of concentrated emission lines (e.g. oxide bands).
 
 Here is an example of a portion of a ThAr spectrum with the identified peaks marked with vertical lines:
 
@@ -72,7 +72,7 @@ We then go through each of the identified peaks and fit it with a Gaussian to ge
 Fitting a wavelength solution
 +++++++++++++++++++++++++++++
 
-With a list of pixel centroids for candidate arc lamp emission lines, we use the :py:func:`fit_wavelength_solution <wavelength_solve_and_calibrate.fit_wavelength_solution>` function to match the emission lines to the reference line list and fit a polynomial wavelength solution.
+With a list of pixel centroids for candidate arc lamp emission lines, we use the :py:func:`fit_wavelength_solution <modules.wavelength_solve_and_calibrate.fit_wavelength_solution>` function to match the emission lines to the reference line list and fit a polynomial wavelength solution.
 
 We use the initial wavelength solution to map the pixel centroids to wavelength centroids and calculate the difference between each peak's wavelength centroid and the reference line list. Peaks that have wavelength centroids close enough to a line in the reference line list are marked as true arc lamp emission lines and assigned the catalogue wavelength value. The *config* file sets the maximum wavelength difference allowed between the centroid and reference line list to still be called a match.
 
@@ -101,7 +101,7 @@ The wavelength solution fitting provides wavelength calibration for the arc lamp
 
 The wavelength calibration step provides pairs of observation times and wavelength solutions for the arc lamp spectra, which are typically taken at the start and end of the night (and sometimes in the middle of the night). We linearly interpolate the arc lamp solutions to each science frame's observation time to provide a wavelength solution. If a science observation is not bracketed by arc lamp observations, we then just adopt the arc lamp solution that is closest in time to the science observation.
 
-The interpolation is done with the :py:func:`interpolate_wavelength_solution <wavelength_solve_and_calibrate.interpolate_wavelength_solution>` function.
+The interpolation is done with the :py:func:`interpolate_wavelength_solution <modules.wavelength_solve_and_calibrate.interpolate_wavelength_solution>` function.
 
 Structure of the wavelength extension
 -------------------------------------
