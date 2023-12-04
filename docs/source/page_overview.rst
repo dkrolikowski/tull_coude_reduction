@@ -44,7 +44,7 @@ Copy in the config file example provided with the package and edit the ``working
 
 Then can call the base package reduction run script from the command line:
 
-python -m tull_coude_reduction.reduce_tull_spectra config_file_name.yml
+>>> python -m tull_coude_reduction.reduce_tull_spectra config_file_name.yml
 
 And the pipeline will run!
 
