@@ -40,18 +40,26 @@ Computation steps: process the template, detail what is currently used. The comp
 
 Measuring RVs: bootstrap sample, combining different orders, smoothing the broadening function. Fit with a gaussian, adopt the median and scaled-MAD as the value and error. Errors may be under-estimated.
 
+.. image:: images/example_broadening_function.pdf
+	:width: 80%
+	:alt: Example RV diagnostic plot.
+
 :purple:`Diagnostic plot:` Two panel. Left panel is the combined broadening function, a gaussian fit, and two vertical lines showing the bootstrap RV + 3sigma range and the barycentric velocity. Right panel is the bootstrap RV distribution with vertical line denoting the median and shaded region the 1 sigma range.
 
 Known issues
 ++++++++++++
 
-Could be sky contamination that affects the BF, see a peak at the barycentric velocity. So be careful!
+We have noticed for some particularly faint targets that there can be sky contamination in the broadening function. This has shown up as a strong peak in the broadening function at the barycentric velocity (or at 0 km/s velocity shift without any correction applied). We are unsure exactly what this is coming from, but believe it could be from sunlight reflected off of the moon and possibly made worse from cloudy conditions. Most of our observations occur in bright time, so this would be an issue in our testing data sets.
 
 .. warning::
 
-	The sky contamination that seems to be a problem.
+	Given this sky contamination, we urge users to inspect the broadening functions for a sharp peak at the barycentric velocity (which is marked with a vertical line in the :purple:`diagnostic plot`).
 
-Also errors haven't been verified, may be underestimated. Also incorporate rotational broadening measurement.
+	If there is a clear peak there and it overlaps with the stellar broadening function, we recommend re-measuring the RV by fitting two components to the broadening function: the stellar signal and the sky contamination signal. While this shouldn't introduce a large RV bias, it may affect the measurement for stars with significant broadening that overlaps with the sky contamination or be confused for an SB2.
+
+Some initial work has been done to analyze the ensemble of RV measurements, and the RV errors might be slightly underestimated. They haven't been verified thoroughly though, but users should keep that in mind.
+
+Also, the broadening functions are only fit with Gaussians which may provide fits that are not as accurate to rotationally broadened stars. In the future we will incorporate fitting with rotationally broadened profile (which already is written in ``saphires``), and also return a measurement of the vsini.
 
 Structure of radial velocity extension
 --------------------------------------
