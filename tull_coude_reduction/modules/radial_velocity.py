@@ -350,6 +350,7 @@ def measure_radial_velocity( file_indices, header_df, config ):
             output_file[ext].header['ERVBF'] = ( bootstrap_rv_error, 'Broadening function RV Error (km/s)' )
         
         # Add information for reconstructing the BF velocity array in the radial velocity extension header
+        output_file['radial velocity'].header['NRVBOOT']  = ( config['radial_velocity']['n_bootstrap_samples'], 'Number of bootstrap samples for RV measurement' )
         output_file['radial velocity'].header['VELSTART'] = ( tar_spec[tar[0]]['vel'][0], 'BF velocity array start (km/s)' )
         output_file['radial velocity'].header['VELSTEP']  = ( tar_spec[tar[0]]['vel_spacing'], 'BF velocity array spacing (km/s)' )
         output_file['radial velocity'].header['NVELPTS']  = ( tar_spec[tar[0]]['vel'].size, 'BF velocity array size' )
