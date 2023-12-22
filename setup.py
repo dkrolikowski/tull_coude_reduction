@@ -15,7 +15,6 @@ setup( name = 'tull_coude_reduction',
        project_urls = { 'Documentation': 'https://tull-coude-reduction.readthedocs.io/en/latest/'
                        },
        packages = find_packages(),
-       package_dir = { '': 'tull_coude_reduction' },
        package_data = { 'tull_coude_reduction.data': [ '*.csv', '*.npy' ] },
        python_requires = '>=3',
        install_requires = [ 'numpy==1.23.5',
