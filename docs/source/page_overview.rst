@@ -195,7 +195,7 @@ Follow this code if using a virtual environment, after first navigating to the l
 
 Follow this for using conda: ::
 
-	conda env create -n pyenv_tull_reduce python=3.9
+	conda create -n pyenv_tull_reduce python=3.9
 	conda activate pyenv_tull_reduce
 	conda update pip setuptools wheel
 
@@ -203,7 +203,7 @@ Note that we also update packages used for installation after we activate the en
 
 Then, navigate to the directory you would like to contain the reduction pipeline repository (for example ``~/codes/``). Here we will clone the pipeline GitHub repository and install it. The repository will contain the pipeline reduction running script, the modules, and the needed reference data files. Follow this code to clone the repository and install using pip with the editable flag to install the code in place (so that it can be modified as development continues): ::
 
-	git clone git@github.com:dkrolikowski/tull_coude_reduction.git
+	git clone git@github.com:dkrolikowski/tull_coude_reduction.git (or git clone https://github.com/dkrolikowski/tull_coude_reduction.git)
 	pip install -e tull_coude_reduction
 
 With that, you should have access to the reduction modules and can invoke the reduction script included in the ``tull_coude_reduction`` package.
