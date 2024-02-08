@@ -278,7 +278,7 @@ def measure_radial_velocity( file_indices, header_df, config ):
         orders_to_use = pd.read_csv( os.path.join( config['general']['code_data_dir'], config['radial_velocity']['orders_to_use_file_name'] ) )
         
         # Make the ls file
-        temp_ls_file_name = 'temp_{}.ls'.format( header_df['file_token'].values[i_file] )
+        temp_ls_file_name = os.path.join( config['general']['working_dir'], config['general']['reduction_dir'], 'temp_{}.ls'.format( header_df['file_token'].values[i_file] ) )
         make_saphires_ls_file( orders_to_use, file_in['wavelength'].data, temp_ls_file_name )
         
         # Make the saphires observed data structures. Don't combine all orders (unnecessary and makes it take forever)
