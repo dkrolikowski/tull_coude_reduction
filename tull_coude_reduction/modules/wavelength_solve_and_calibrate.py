@@ -229,33 +229,43 @@ def fit_wavelength_solution( pixel_centroids, prelim_wavelengths, line_list_wave
     # Initialize the pixel and wavelength lists with the array of pixel-wavelength pairs that pass the line list closesness cut
     line_centroid_record = { 'pixel': [ pixel_centroids[line_use_mask] ], 'wavelength': [ closest_line_wavelengths[line_use_mask] ], 
                             'vel_resid': [], 'poly_coeffs': [] }
-    
-    ### Now run the loop for iteratively fitting the wavelength solution -- set break if the number of points include is fewer than the polynomial degree + 1
-    while line_centroid_record['pixel'][-1].size >= ( config['wavecal']['wave_cal_poly_order'] + 1 ):
         
-        # Fit a polynomial to the lines!
+    if line_centroid_record['pixel'][-1].size < ( config['wavecal']['wave_cal_poly_order'] + 1 ):
+    
+        # Temp
         wave_poly_fit = np.polyfit( line_centroid_record['pixel'][-1], line_centroid_record['wavelength'][-1], config['wavecal']['wave_cal_poly_order'] )
         line_centroid_record['poly_coeffs'].append( wave_poly_fit )
-        
-        # Calculate the fit polynomial at the found line peaks
         wave_poly_vals = np.polyval( wave_poly_fit, line_centroid_record['pixel'][-1] )
-    
-        # Calculate residuals between the catalogue wavelength and the polynomial fit, in velocity
         velocity_residuals = ( wave_poly_vals - line_centroid_record['wavelength'][-1] ) / line_centroid_record['wavelength'][-1] * 3e5
         line_centroid_record['vel_resid'].append( velocity_residuals )
+    
+    else:
+        ### Now run the loop for iteratively fitting the wavelength solution -- set break if the number of points include is fewer than the polynomial degree + 1
+        while line_centroid_record['pixel'][-1].size >= ( config['wavecal']['wave_cal_poly_order'] + 1 ):
+            
+            # Fit a polynomial to the lines!
+            wave_poly_fit = np.polyfit( line_centroid_record['pixel'][-1], line_centroid_record['wavelength'][-1], config['wavecal']['wave_cal_poly_order'] )
+            line_centroid_record['poly_coeffs'].append( wave_poly_fit )
+            
+            # Calculate the fit polynomial at the found line peaks
+            wave_poly_vals = np.polyval( wave_poly_fit, line_centroid_record['pixel'][-1] )
         
-        # Get the MAD of the velocity residuals
-        velocity_residual_mad = stats.median_abs_deviation( velocity_residuals, scale = 'normal', nan_policy = 'omit' )
-    
-        # See how many lines are outside the sigma level defined in the config
-        mad_reject = np.abs( velocity_residuals - np.nanmedian( velocity_residuals ) ) > config['wavecal']['vel_resid_sigma_reject'] * velocity_residual_mad
-    
-        # If there are no more points to reject -- break out of the loop!
-        if mad_reject.sum() == 0 or (~mad_reject).sum() < ( config['wavecal']['wave_cal_poly_order'] + 1 ):
-            break
-        else:
-            line_centroid_record['pixel'].append( line_centroid_record['pixel'][-1][~mad_reject] )
-            line_centroid_record['wavelength'].append( line_centroid_record['wavelength'][-1][~mad_reject] )
+            # Calculate residuals between the catalogue wavelength and the polynomial fit, in velocity
+            velocity_residuals = ( wave_poly_vals - line_centroid_record['wavelength'][-1] ) / line_centroid_record['wavelength'][-1] * 3e5
+            line_centroid_record['vel_resid'].append( velocity_residuals )
+            
+            # Get the MAD of the velocity residuals
+            velocity_residual_mad = stats.median_abs_deviation( velocity_residuals, scale = 'normal', nan_policy = 'omit' )
+        
+            # See how many lines are outside the sigma level defined in the config
+            mad_reject = np.abs( velocity_residuals - np.nanmedian( velocity_residuals ) ) > config['wavecal']['vel_resid_sigma_reject'] * velocity_residual_mad
+        
+            # If there are no more points to reject -- break out of the loop!
+            if mad_reject.sum() == 0 or (~mad_reject).sum() < ( config['wavecal']['wave_cal_poly_order'] + 1 ):
+                break
+            else:
+                line_centroid_record['pixel'].append( line_centroid_record['pixel'][-1][~mad_reject] )
+                line_centroid_record['wavelength'].append( line_centroid_record['wavelength'][-1][~mad_reject] )
     
     # Return the final polynomial fit coefficients separate from the record dictionary for ease of access
     
@@ -348,48 +358,53 @@ def plot_spectra_zoom_windows( obs_wavelength, obs_flux, ref_wavelength, ref_flu
     """
         
     number_of_pages = int( np.ceil( np.ceil( np.ptp( obs_wavelength ) / window_size ) / number_of_subplots ) )
-    
-    subplot_wave_start = obs_wavelength.min()
-    
-    with PdfPages( file_name ) as pdf:
+
+    if number_of_pages > 10:
         
-        for i_page in range( number_of_pages ):
-            
-            # fig = plt.figure( figsize = ( 12, 8 ), num = 1, clear = True )
-            fig = plt.figure( num = 1, clear = True )
-            
-            fig.set_size_inches( 12, 8 )
-            
-            i_subplot = 1
-            
-            while subplot_wave_start <= obs_wavelength.max() and i_subplot <= number_of_subplots:
-                
-                subplot_wave_end = subplot_wave_start + 12.0
-                
-                obs_plot_loc  = np.where( ( obs_wavelength >= subplot_wave_start ) & ( obs_wavelength <= subplot_wave_end ) )[0]
-                ref_plot_loc  = np.where( ( ref_wavelength >= subplot_wave_start ) & ( ref_wavelength <= subplot_wave_end ) )[0]
-                line_plot_loc = np.where( ( lines_used_wavelength >= subplot_wave_start ) & ( lines_used_wavelength <= subplot_wave_end ) )[0]
-                
-                fig.add_subplot( 230 + i_subplot )
-                
-                plt.plot( obs_wavelength[obs_plot_loc], ( obs_flux / np.nanmedian( obs_flux ) )[obs_plot_loc], '#323232', lw = 1.25 )
-                
-                plt.plot( ref_wavelength[ref_plot_loc], ( ref_flux / np.nanmedian( ref_flux ) )[ref_plot_loc] * 5, '#bf3465', lw = 1 )
+        return None
     
-                for line_wavelength in lines_used_wavelength[line_plot_loc]:
-                    plt.axvline( x = line_wavelength, c = '#1c6ccc', lw = 0.75, ls = '--' )
-                    
-                plt.yticks( [], [] )
-                plt.gca().set_yscale( 'log' )
-                                
-                subplot_wave_start += window_size
-                i_subplot += 1
+    else:
+        subplot_wave_start = obs_wavelength.min()
+        
+        with PdfPages( file_name ) as pdf:
+            
+            for i_page in range( number_of_pages ):
                 
-            pdf.savefig( bbox_inches = 'tight', pad_inches = 0.05 )
-            # fig.clear()
-            # plt.close( fig )
-                            
-    return None
+                # fig = plt.figure( figsize = ( 12, 8 ), num = 1, clear = True )
+                fig = plt.figure( num = 1, clear = True )
+                
+                fig.set_size_inches( 12, 8 )
+                
+                i_subplot = 1
+                
+                while subplot_wave_start <= obs_wavelength.max() and i_subplot <= number_of_subplots:
+                    
+                    subplot_wave_end = subplot_wave_start + 12.0
+                    
+                    obs_plot_loc  = np.where( ( obs_wavelength >= subplot_wave_start ) & ( obs_wavelength <= subplot_wave_end ) )[0]
+                    ref_plot_loc  = np.where( ( ref_wavelength >= subplot_wave_start ) & ( ref_wavelength <= subplot_wave_end ) )[0]
+                    line_plot_loc = np.where( ( lines_used_wavelength >= subplot_wave_start ) & ( lines_used_wavelength <= subplot_wave_end ) )[0]
+                    
+                    fig.add_subplot( 230 + i_subplot )
+                    
+                    plt.plot( obs_wavelength[obs_plot_loc], ( obs_flux / np.nanmedian( obs_flux ) )[obs_plot_loc], '#323232', lw = 1.25 )
+                    
+                    plt.plot( ref_wavelength[ref_plot_loc], ( ref_flux / np.nanmedian( ref_flux ) )[ref_plot_loc] * 5, '#bf3465', lw = 1 )
+        
+                    for line_wavelength in lines_used_wavelength[line_plot_loc]:
+                        plt.axvline( x = line_wavelength, c = '#1c6ccc', lw = 0.75, ls = '--' )
+                        
+                    plt.yticks( [], [] )
+                    plt.gca().set_yscale( 'log' )
+                                    
+                    subplot_wave_start += window_size
+                    i_subplot += 1
+                    
+                pdf.savefig( bbox_inches = 'tight', pad_inches = 0.05 )
+                # fig.clear()
+                # plt.close( fig )
+                                
+        return None
 
 def plot_wavelength_fit_iteration_spectra( fit_record, obs_flux, ref_wavelength, ref_flux, file_name ):
     """ Function to plot the wavelength-calibrated observed spectra for each of the fitting iterations compared to a reference spectrum. This is to highlight the quality of the solution.
