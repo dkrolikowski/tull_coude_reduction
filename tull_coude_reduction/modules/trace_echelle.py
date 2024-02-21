@@ -61,7 +61,7 @@ def recenter_order_trace( centers, slice_values, padding ):
 
     return re_centers
 
-def find_order_centers_along_slice( flat_slice, order_xdisp_width, plot_dir, method = 'peak_find' ):
+def find_order_centers_along_slice( flat_slice, order_xdisp_width, plot_dir, method = 'peak_find', binned = False ):
     """ Function to find echelle order centers given a slice of the flat field along the cross dispersion axis. 
     The gradient of this flat slice is used to find the top edge of each order (where the flux steeply increases at the order edge).
     There are two methods available to use: one that uses a single threshold value for the flat slice gradient and one to use a scipy.signal peak finding algorithm.
@@ -100,9 +100,9 @@ def find_order_centers_along_slice( flat_slice, order_xdisp_width, plot_dir, met
         below_median_loc = np.where( flat_slice_gradient_use < np.nanmedian( flat_slice_gradient_use ) )[0]
         
         flat_slice_gradient_use[below_median_loc] = np.nanmedian( flat_slice_gradient_use )
-                
-        # Use scipy find_peaks with constraints on the distane between two order peaks (the input rough order width value) and the width of the gradient peak (2.01 to 4 pixels, from tests)
-        order_centers, _ = find_peaks( flat_slice_gradient_use, distance = order_xdisp_width, width = [ 2.01, 6.5 ] )
+        
+        # Use scipy find_peaks with constraints on the distane between two order peaks (the input rough order width value) and the width of the gradient peak (2.01 to 6.5 pixels, from tests if not binned. 1.01 to 3.5 if binned)
+        order_centers, _ = find_peaks( flat_slice_gradient_use, distance = order_xdisp_width, width = [ 1.01, 3.5 ] if binned else [ 2.01, 6.5 ] )
         
         # Add half of the input order cross dispersion width so the estimates are for order center and not edge
         order_centers += order_xdisp_width // 2
@@ -136,8 +136,8 @@ def find_order_centers_along_slice( flat_slice, order_xdisp_width, plot_dir, met
                             
     ### Common to both methods -- recenter the found orders! More important for the gradient_threshold method but still worth doing just in case
     
-    order_centers = recenter_order_trace( order_centers, flat_slice, order_xdisp_width // 2 + 5 )
-                
+    order_centers = recenter_order_trace( order_centers, flat_slice, padding = order_xdisp_width // 2 + 3 if binned else order_xdisp_width // 2 + 5 )
+
     ### Plot the flat slice and the order centers that it found!
     
     plt.clf()
@@ -164,7 +164,7 @@ def find_order_centers_along_slice( flat_slice, order_xdisp_width, plot_dir, met
 
     return order_centers
 
-def find_full_trace( flat_field_flux, order_centers, order_disp_start_index, order_xdisp_width, plot_dir ):
+def find_full_trace( flat_field_flux, order_centers, order_disp_start_index, order_xdisp_width, plot_dir, binned = False ):
     """ Function to find the full trace from starting locations found at the edge of the echellogram.
     The orders are traced along the flat field, defined with roughly estimating the center of the flat field order 2D spectrum.
 
@@ -200,18 +200,18 @@ def find_full_trace( flat_field_flux, order_centers, order_disp_start_index, ord
         flat_slice = flat_field_flux[:,-pixel+order_disp_start_index+1]
         
         # Recenter the trace using the previous pixel's center as a starting point, based on the flat field flux slice at the current pixel
-        full_trace[:,-pixel] = recenter_order_trace( prev_trace, flat_slice, order_xdisp_width // 2 + 5 )
+        full_trace[:,-pixel] = recenter_order_trace( prev_trace, flat_slice, padding = order_xdisp_width // 2 + 3 if binned else order_xdisp_width // 2 + 5 )
         
         # Set the previous trace location to be this pixel's trace
         prev_trace = full_trace[:,-pixel]
         
     ### Plot the full trace on top of the flat field image, with three different figure pages of different y-axis ranges
     
-    plot_trace_on_image( flat_field_flux, full_trace, [ ( 2048, 0 ), ( 2048, 1000 ), ( 1050, 0 ) ], os.path.join( plot_dir, 'full_trace.pdf' ), title_str = 'Full Trace' )
+    plot_trace_on_image( flat_field_flux, full_trace, [ ( 1024, 0 ), ( 1024, 500 ), ( 550, 0 ) ] if binned else [ ( 2048, 0 ), ( 2048, 1000 ), ( 1050, 0 ) ], os.path.join( plot_dir, 'full_trace.pdf' ), title_str = 'Full Trace' )
     
     return full_trace
 
-def fit_full_trace( trace, trace_poly_degree, trace_poly_fit_start_index, number_of_orders, flat_field_flux, plot_dir ):
+def fit_full_trace( trace, trace_poly_degree, trace_poly_fit_start_index, number_of_orders, flat_field_flux, plot_dir, binned ):
     """ Function to take the full trace from find_full_trace and fit each order's trace with a polynomial.
     Then, the order trace polynomial coefficients themselves are fit as a function of order, and these hyper-fits are used to find "bad orders" with poorly defined traces.
     Poorly-fit orders have their trace polynomial fit coefficients replaced with coefficients from the hyper-fits.
@@ -256,7 +256,7 @@ def fit_full_trace( trace, trace_poly_degree, trace_poly_fit_start_index, number
         
     # Plot the initial trace fit
     plot_file_name = os.path.join( plot_dir, 'initial_fit_trace.pdf' )
-    plot_trace_on_image( flat_field_flux, trace, [ ( 2048, 0 ), ( 2048, 1000 ), ( 1050, 0 ) ], plot_file_name, title_str = 'Initial Trace Fit, using Pixels {}:'.format( trace_poly_fit_start_index ), trace_fit = initial_fit_trace )
+    plot_trace_on_image( flat_field_flux, trace, [ ( 1024, 0 ), ( 1024, 500 ), ( 550, 0 ) ] if binned else [ ( 2048, 0 ), ( 2048, 1000 ), ( 1050, 0 ) ], plot_file_name, title_str = 'Initial Trace Fit, using Pixels {}:'.format( trace_poly_fit_start_index ), trace_fit = initial_fit_trace )
     
     ### Fit the polynomial coefficients as a function of order, and sigma clip to find "bad orders" with poorly fit/defined traces to replace
     
@@ -352,7 +352,7 @@ def fit_full_trace( trace, trace_poly_degree, trace_poly_fit_start_index, number
     
     # Plot the final fit trace on the flat field
     plot_file_name = os.path.join( plot_dir, 'final_fit_trace.pdf' )
-    plot_trace_on_image( flat_field_flux, trace, [ ( 2048, 0 ), ( 2048, 1000 ), ( 1050, 0 ) ], plot_file_name, title_str = 'Final Trace Fit, using Pixels {}:'.format( trace_poly_fit_start_index ), trace_fit = final_fit_trace, orders_to_highlight = bad_orders )
+    plot_trace_on_image( flat_field_flux, trace, [ ( 1024, 0 ), ( 1024, 500 ), ( 550, 0 ) ] if binned else [ ( 2048, 0 ), ( 2048, 1000 ), ( 1050, 0 ) ], plot_file_name, title_str = 'Final Trace Fit, using Pixels {}:'.format( trace_poly_fit_start_index ), trace_fit = final_fit_trace, orders_to_highlight = bad_orders )
            
     return final_fit_trace, bad_orders
 
@@ -441,7 +441,7 @@ def get_trace( flat_field, config ):
     flat_field_slice = flat_field['flat flux'].data[:,config['trace']['order_start_index']]
     
     # Get the order centers
-    order_start_centers = find_order_centers_along_slice( flat_field_slice, config['trace']['order_xdisp_trace_width'], trace_dir, config['trace']['order_center_method'] )
+    order_start_centers = find_order_centers_along_slice( flat_field_slice, config['trace']['order_xdisp_trace_width'], trace_dir, config['trace']['order_center_method'], config['general']['binning'] )
             
     # Get rid of the first order if it isn't fully on the detector with a bit of space on top (2/3 of the config defined cross dispersion order width)
     if order_start_centers[0] < config['trace']['order_xdisp_trace_width'] * 2 / 3:
@@ -450,11 +450,11 @@ def get_trace( flat_field, config ):
     ### Get the full trace across the full echellogram and fit each order with polynomials
     
     # Get the full trace using the flat field and the starting order centers
-    full_trace = find_full_trace( flat_field['flat flux'].data, order_start_centers, config['trace']['order_start_index'], config['trace']['order_xdisp_trace_width'], trace_dir )
+    full_trace = find_full_trace( flat_field['flat flux'].data, order_start_centers, config['trace']['order_start_index'], config['trace']['order_xdisp_trace_width'], trace_dir, config['general']['binning'] )
     
     # Fit the trace: the returned fit trace is from the evaluated polynomial fits to each order's trace. 
     # This also returns a list of orders with poor or missing order trace fits, so their trace is defined using fits to other orders' polynomial coefficients
-    fit_trace, orders_poorly_fit = fit_full_trace( full_trace, config['trace']['trace_poly_degree'], config['trace']['trace_poly_fit_start_index'], config['trace']['number_of_orders'], flat_field['flat flux'].data, trace_dir )
+    fit_trace, orders_poorly_fit = fit_full_trace( full_trace, config['trace']['trace_poly_degree'], config['trace']['trace_poly_fit_start_index'], config['trace']['number_of_orders'], flat_field['flat flux'].data, trace_dir, config['general']['binning'] )
     
     ### Output the trace
     
