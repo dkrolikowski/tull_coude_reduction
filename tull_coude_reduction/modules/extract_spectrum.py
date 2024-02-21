@@ -187,16 +187,16 @@ def optimal_extraction( flux_image, err_image, num_pixels, order_width, backgrou
         # If the background is fixed to the values fit at the top of this function:
         if background_option == 'fixed':
     
-            # Initial guess for the Gaussian parameters: Amp = avg of pix 7-9, Mean = pixel 8 (halfway), Sigma = 1.5 pixels
-            p_guess = [ np.nanmean( flux_slice[7:10] ), 8, 1.5 ]
+            # Initial guess for the Gaussian parameters: Amp = avg of center +/- 1 pixel on either side, Mean = center pixel, Sigma = order width / 10 pixels
+            p_guess = [ np.nanmean( flux_slice[order_width//2-1:order_width//2+2] ), order_width // 2, order_width / 10 ]
                 
             # Create a bespoke Gaussian function with the fixed background
             gaussian_function_use = lambda x, a, m, s: reduction_utils.gaussian_1d( x, a, m, s, background )
             
         elif background_option == 'fit':
             
-            # Initial guess for the Gaussian parameters: Amp = avg of pix 7-9, Mean = pixel 8 (halfway), Sigma = 1.5 pixels, Background = Value from fit
-            p_guess = [ np.nanmean( flux_slice[7:10] ), 8, 1.5, background ]
+            # Initial guess for the Gaussian parameters: Amp = avg of center +/- 1 pixel on either side, Mean = center pixel, Sigma = order width / 10, Background = Value from fit
+            p_guess = [ np.nanmean( flux_slice[order_width//2-1:order_width//2+2] ), order_width // 2, order_width / 10, background ]
                 
             # Create a bespoke Gaussian function with the fixed background
             gaussian_function_use = reduction_utils.gaussian_1d
