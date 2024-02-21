@@ -118,11 +118,16 @@ def fit_spectra_continuum( file_indices, header_df, config ):
                 wavelength_knot_spacing = 15
             
             # Fit the continuum!
-            continuum_spline = continuum_fit_with_spline( file_in['wavelength'].data[order,not_nan], file_in['extracted flux'].data[order,not_nan], wavelength_knot_spacing, config['continuum_fit']['lower_sigma_reject'], config['continuum_fit']['upper_sigma_reject'] )
-            
-            # Evaluate the spline
-            continuum_values[order] = interpolate.splev( file_in['wavelength'].data[order], continuum_spline )
-            
+            try:
+                continuum_spline = continuum_fit_with_spline( file_in['wavelength'].data[order,not_nan], file_in['extracted flux'].data[order,not_nan], wavelength_knot_spacing, config['continuum_fit']['lower_sigma_reject'], config['continuum_fit']['upper_sigma_reject'] )
+                
+                # Evaluate the spline
+                continuum_values[order] = interpolate.splev( file_in['wavelength'].data[order], continuum_spline )
+
+            except ValueError:
+                print( 'Continuum fitting failed for file {} on order {}'.format( header_df['file_token'].values[i_file], order ) )
+                continuum_values[order] = np.ones( file_in['wavelength'].data[order].size )
+                
         ### Output the continuum fit
         
         # Build a new HDU list with the continuum extension added
