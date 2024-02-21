@@ -100,9 +100,9 @@ def find_order_centers_along_slice( flat_slice, order_xdisp_width, plot_dir, met
         below_median_loc = np.where( flat_slice_gradient_use < np.nanmedian( flat_slice_gradient_use ) )[0]
         
         flat_slice_gradient_use[below_median_loc] = np.nanmedian( flat_slice_gradient_use )
-        
+                
         # Use scipy find_peaks with constraints on the distane between two order peaks (the input rough order width value) and the width of the gradient peak (2.01 to 4 pixels, from tests)
-        order_centers, _ = find_peaks( flat_slice_gradient_use, distance = order_xdisp_width, width = [ 2.01, 4 ] )
+        order_centers, _ = find_peaks( flat_slice_gradient_use, distance = order_xdisp_width, width = [ 2.01, 6.5 ] )
         
         # Add half of the input order cross dispersion width so the estimates are for order center and not edge
         order_centers += order_xdisp_width // 2
@@ -274,7 +274,7 @@ def fit_full_trace( trace, trace_poly_degree, trace_poly_fit_start_index, number
         mad  = np.nanmedian( np.abs( trace_poly_fit_pars[:,i_coeff] - hyper_fit_vals ) )
         
         # Orders with residuals greater than 10x the MAD are considered bad
-        mask = ( np.abs( trace_poly_fit_pars[:,i_coeff] - hyper_fit_vals ) <= 10 * mad )
+        mask = ( np.abs( trace_poly_fit_pars[:,i_coeff] - hyper_fit_vals ) <= 5 * mad )
         
         bad_orders.extend( np.where( ~mask )[0] )
         
