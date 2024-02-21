@@ -1,10 +1,11 @@
 general:
-  do_all_steps: False # If this is set to True: it will override individual module do_step flags and run every step.
+  do_all_steps: True # If this is set to True: it will override individual module do_step flags and run every step.
   remove_images_at_end: False # If True: the processed image files will be deleted after pipeline is finished (set to True if there are storage concerns)
-  working_dir: '/Users/krolikowski/coude_data/20230801/' # Path to the directory containing the night's data (and in which the reduction will be saved)
+  working_dir: 'path/to/directory/containing/raw/data' # Path to the directory containing the night's data (and in which the reduction will be saved)
   reduction_dir: 'reduction_new/' # Reduction directory name
   sub_dir_list: [ 'cals', 'trace', 'object_files', 'spectrum_files', 'wavecal', 'radial_velocity' ] # Reduction sub-directories to create at start of reduction run
   header_info_file_name: 'header_info.csv' # Name for the header info file
+  binning: True # True if it is 2x2 binned
 
 calibrations:
   do_step: False
