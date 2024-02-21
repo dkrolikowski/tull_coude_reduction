@@ -50,7 +50,10 @@ def continuum_fit_with_spline( x_values, y_values, x_knot_spacing, lower_sigma_r
 
     # Loop for the maximum number of iterations, unless an iteration sooner results in no rejections
     for i_iter in range( max_iter ):
-
+        
+        # Redefine the spline knots -- issue can arise if x array changes in a certain way relative to original knot definitions
+        spline_knots = np.arange( x_values_to_fit.min() + x_knot_spacing, x_values_to_fit.max(), x_knot_spacing )
+        
         # Get the b spline representation of the data
         spline_fit = interpolate.splrep( x_values_to_fit, y_values_to_fit, k = 3, t = spline_knots )
 
