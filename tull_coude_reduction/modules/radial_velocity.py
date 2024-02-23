@@ -259,12 +259,13 @@ def measure_radial_velocity( file_indices, header_df, config ):
 
         ## BC velocity
 
-        # Get the data midtime. If flux weighted midtime is in the header use that, otherwise the header OBSJD + half exposure time
-        if 'emfwmtim' in file_in[0].header:
+        # Get the data midtime. Try to use emeter flux-weighted midtime, if not just use OBSJD + half exposure time
+        try:
             obs_mid_jd = Time( file_in[0].header['DATE-OBS'] + 'T' + file_in[0].header['emfwmtim'], format = 'isot' ).jd
-        else:
+        except ( KeyError, ValueError ) as e:
+            print( 'Error: {}.\nUsing observation midpoint rather than emeter flux-weighted midpoint.'.format( e ) )
             obs_mid_jd = header_df['obs_jd'].values[i_file] + 0.5 * header_df['exp_time'].values[i_file] / 60. / 60. / 24.
-                        
+
         # Get RA/Dec from header into degrees
         sky_coord = SkyCoord( file_in[0].header['ra'], file_in[0].header['dec'], unit = ( u.hourangle, u.deg ) )
                 
