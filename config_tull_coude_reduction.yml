@@ -65,6 +65,7 @@ continuum_fit:
 
 radial_velocity:
   do_step: True
+  recompute_rvs: False # If set to False, will skip files that already have radial velocity extensions
   orders_to_use_file_name: 'good_orders_tull_coude.csv' # File name of the pre-defined orders to use for BF computation
   template_file_name: 'phoenix_t5500_g4.5_m0.0.csv' # File name of the spectrum template for BF computation
   bf_velocity_span: 300 # The velocity span to compute the BF over (in km/s)

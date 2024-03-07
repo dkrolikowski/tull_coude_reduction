@@ -253,9 +253,15 @@ def measure_radial_velocity( file_indices, header_df, config ):
         # Read in the spectra file
         file_name = os.path.join( config['general']['reduction_dir'], 'spectrum_files', 'tullcoude_{}_spectrum.fits'.format( header_df['file_token'].values[i_file] ) )
         file_in   = fits.open( file_name )
-                
-        # Continuum normalize the spectrum
+        
+        if ( not config['radial_velocity']['recompute_rvs'] ) and ( 'radial velocity' in file_in ):
+                continue
+                        
+        # Continuum normalize the spectrum, and get rid of really bad negative flux points
         flux_cont_norm = file_in['extracted flux'].data / file_in['continuum'].data
+        
+        bad_flux = np.where( flux_cont_norm < -10 )
+        flux_cont_norm[bad_flux] = np.nan
 
         ## BC velocity
 
@@ -301,7 +307,7 @@ def measure_radial_velocity( file_indices, header_df, config ):
             continue
 
         ### Now run analysis to smooth the broadening function
-        
+
         try:
             tar_spec = saphires.bf.analysis( tar, tar_spec, sb = 'sb1', R = config['radial_velocity']['bf_smooth_res'], fit_trim = 20, text_out = False, prof = 'g' )
         except RuntimeError:
