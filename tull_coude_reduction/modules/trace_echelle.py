@@ -137,6 +137,9 @@ def find_order_centers_along_slice( flat_slice, order_xdisp_width, plot_dir, met
     ### Common to both methods -- recenter the found orders! More important for the gradient_threshold method but still worth doing just in case
     
     order_centers = recenter_order_trace( order_centers, flat_slice, padding = order_xdisp_width // 2 + 3 if binned else order_xdisp_width // 2 + 5 )
+    
+    # Throw out order centers that are within 100 pixels of the end
+    order_centers = order_centers[order_centers<1948]
 
     ### Plot the flat slice and the order centers that it found!
     
