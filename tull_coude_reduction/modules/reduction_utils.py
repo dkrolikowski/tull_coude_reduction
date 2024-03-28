@@ -36,7 +36,7 @@ def make_header_manifest( header_manifest_file_name ):
     file_names = np.sort( glob.glob( '*.fits' ) )
     
     # Set up the output data frame!
-    header_df = pd.DataFrame( columns = [ 'file_name', 'file_token', 'image_type', 'object', 'ra', 'dec', 'exp_time', 'obs_jd', 'airmass', 'zenith_angle', 'gain', 'read_noise', 'em_flux'], 
+    header_df = pd.DataFrame( columns = [ 'file_name', 'file_token', 'image_type', 'object', 'ra', 'dec', 'exp_time', 'obs_jd', 'airmass', 'zenith_angle', 'gain', 'read_noise', 'em_flux', 'observer' ], 
                               index = range( file_names.size ) )
 
     # Go through each file and write header info to the output data frame
@@ -86,6 +86,10 @@ def make_header_manifest( header_manifest_file_name ):
         # E meter flux, if it is there!
         if 'emflux' in header:
             header_df['em_flux'][i_file] = header['emflux']
+
+        # Observer name if it is there!
+        if 'observer' in header:
+            header_df['observer'][i_file] = header['observer']
 
     # Write the header "manifest" out to a csv!
     header_df.to_csv( header_manifest_file_name, index = False )
