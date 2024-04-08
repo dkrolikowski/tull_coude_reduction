@@ -339,7 +339,7 @@ def extract_spectrum( file_indices, trace, header_df, extraction_method, backgro
     for i_file in file_indices:
         
         ### Set up the frame to extract
-        
+                
         # The raw file name to read in and read it in
         file_name  = os.path.join( config['general']['reduction_dir'], 'object_files', 'tullcoude_{}.fits'.format( header_df['file_token'].values[i_file] ) )
         input_file = fits.open( file_name )
@@ -362,10 +362,28 @@ def extract_spectrum( file_indices, trace, header_df, extraction_method, backgro
             err_order_image  = get_order_image_block( err_full_image, trace[order], config['extraction']['order_xdisp_width_extract'] )
             
             if extraction_method == 'optimal_extraction':
-                extracted_flux[order], extracted_err[order] = optimal_extraction( flux_order_image, err_order_image, num_pixels, config['extraction']['order_xdisp_width_extract'], background_option )
+                try:
+                    extracted_flux[order], extracted_err[order] = optimal_extraction( flux_order_image, err_order_image, num_pixels, config['extraction']['order_xdisp_width_extract'], background_option )
+                    redo_as_sum = False
+                except:
+                    print( 'Issue with optimal extraction -- breaking and re-doing extraction with sum.' )
+                    redo_as_sum = True
+                    break
             elif extraction_method == 'sum_extraction':
+                redo_as_sum = False
                 extracted_flux[order], extracted_err[order] = sum_extraction( flux_order_image, err_order_image, num_pixels, config['extraction']['order_xdisp_width_extract'], background_option )
         
+        if redo_as_sum:
+            extraction_method = 'sum'
+            background_option = 'subtract'
+            for order in range( num_orders ):
+                
+                ### Pull out the flux and error image blocks around the trace
+                flux_order_image = get_order_image_block( flux_full_image, trace[order], config['extraction']['order_xdisp_width_extract'] )
+                err_order_image  = get_order_image_block( err_full_image, trace[order], config['extraction']['order_xdisp_width_extract'] )
+                
+                extracted_flux[order], extracted_err[order] = sum_extraction( flux_order_image, err_order_image, num_pixels, config['extraction']['order_xdisp_width_extract'], background_option )
+
         ### Write out the file with the extracted spectrum!
         
         ### Set up the output image
